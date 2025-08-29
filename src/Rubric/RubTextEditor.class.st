@@ -437,6 +437,11 @@ RubTextEditor >> changeLfToCr: aKeyboardEvent [
 ]
 
 { #category : 'accessing' }
+RubTextEditor >> characterAt: anOffset [ 
+	^ self paragraph text asString at: anOffset.
+]
+
+{ #category : 'accessing' }
 RubTextEditor >> characterGroupAt: index in: aString [
 
 	| character |
@@ -637,26 +642,25 @@ RubTextEditor >> crlf: aKeyboardEvent [
 	^false
 ]
 
+{ #category : 'as yet unclassified' }
+RubTextEditor >> currentColumn [
+	self shouldBeImplemented.
+]
+
 { #category : 'nonediting/nontyping keys' }
 RubTextEditor >> cursorDown: aKeyboardEvent [
-
 	"Private - Move cursor from position in current line to same position in
 	next line. If next line too short, put at end. If shift key down,
 	select."
 
+	| shift ctrl |
 	self closeTypeIn.
-	self
-		moveCursor:[:position | self
-				sameColumn: position
-				newLine:[:line | line + 1]
-				forward: true]
-		forward: true
-		specialBlock:[:position | self
-				sameColumn: position
-				newLine:[:line | line + 1]
-				forward: true]
-		event: aKeyboardEvent.
-	^true
+
+	shift := aKeyboardEvent shiftPressed.
+	ctrl := aKeyboardEvent commandKeyPressed or: [ aKeyboardEvent controlKeyPressed ].
+
+	self moveCursor: (RubMoveDownAction ctrlPressed: ctrl) shiftPressed: shift.
+	^ true
 ]
 
 { #category : 'nonediting/nontyping keys' }
@@ -696,16 +700,15 @@ RubTextEditor >> cursorLeft: aKeyboardEvent [
     selecting or extending current selection. Don't allow cursor past
     beginning of text"
 
+	| shift ctrl |
 	textArea editing ifTrue: [ ^ false ].
 	self closeTypeIn.
-	self
-		moveCursor: [ :position | position - 1 max: 1 ]
-		forward: false
-		specialBlock: [ :position |
-			self
-				previousWord: position
-				stopOnUpperCase: aKeyboardEvent optionKeyPressed ]
-		event: aKeyboardEvent.
+	
+	shift := aKeyboardEvent shiftPressed.
+	ctrl := aKeyboardEvent commandKeyPressed or: [ aKeyboardEvent controlKeyPressed ].
+
+	self moveCursor: (RubMoveLeftAction ctrlPressed: ctrl) shiftPressed: shift.
+
 	^ true
 ]
 
@@ -748,16 +751,14 @@ RubTextEditor >> cursorRight: aKeyboardEvent [
     start selecting characters or extending already selected characters.
     Don't allow cursor past end of text"
 
+	| shift ctrl |
 	textArea editing ifTrue: [ ^ false ].
 	self closeTypeIn.
-	self
-		moveCursor: [ :position | position + 1 ]
-		forward: true
-		specialBlock: [ :position |
-			self
-				nextWord: position
-				stopOnUpperCase: aKeyboardEvent optionKeyPressed ]
-		event: aKeyboardEvent.
+	shift := aKeyboardEvent shiftPressed.
+	ctrl := aKeyboardEvent commandKeyPressed or: [ aKeyboardEvent controlKeyPressed ].
+
+	self moveCursor: (RubMoveRightAction ctrlPressed: ctrl) shiftPressed: shift.
+
 	^ true
 ]
 
@@ -771,22 +772,17 @@ RubTextEditor >> cursorTopHome: aKeyboardEvent [
 
 { #category : 'nonediting/nontyping keys' }
 RubTextEditor >> cursorUp: aKeyboardEvent [
-"Private - Move cursor from position in current line to same position in
+	"Private - Move cursor from position in current line to same position in
 prior line. If prior line too short, put at end"
 
+	| shift ctrl |
 	self closeTypeIn.
-	self
-		moveCursor: [:position | self
-				sameColumn: position
-				newLine:[:line | line - 1]
-				forward: false]
-		forward: false
-		specialBlock:[:position | self
-				sameColumn: position
-				newLine:[:line | line - 1]
-				forward: false]
-		event: aKeyboardEvent.
-	^true
+
+	shift := aKeyboardEvent shiftPressed.
+	ctrl := aKeyboardEvent commandKeyPressed or: [ aKeyboardEvent controlKeyPressed ].
+
+	self moveCursor: (RubMoveUpAction ctrlPressed: ctrl) shiftPressed: shift.
+	^ true
 ]
 
 { #category : 'private' }
@@ -1418,6 +1414,12 @@ RubTextEditor >> insertAndSelectAfterCurrentSelection: aString [
 	self insertAndSelect: aString at: selectionInterval last + 1
 ]
 
+{ #category : 'as yet unclassified' }
+RubTextEditor >> invalidateVisualColumn [
+
+	textArea invalidateVisualColumn
+]
+
 { #category : 'testing' }
 RubTextEditor >> isCaretBehindChar [
 	"Return true if the cursor position is after an alphanumeric character, otherwise false."
@@ -1636,23 +1638,21 @@ RubTextEditor >> morphicUIManager [
 ]
 
 { #category : 'private' }
-RubTextEditor >> moveCursor: directionBlock forward: forward specialBlock: specialBlock event: aKeyboardEvent [
+RubTextEditor >> moveCursor: directionBlock forward: forward specialBlock: specialBlock ctrlPressed: ctrlPressed shiftPressed: shiftPressed [
 	"Private - Move cursor.
 	directionBlock is a one argument Block that computes the new Position from a given one.
 	specialBlock is a one argumentBlock that computes the new position from a given one under the alternate semantics.
 	Note that directionBlock always is evaluated first."
 
-	| shift indices caretPosition newPosition |
-	shift := aKeyboardEvent shiftPressed.
-	indices := self setIndices: shift forward: forward.
+	| indices caretPosition newPosition |
+	indices := self setIndices: shiftPressed forward: forward.
 	caretPosition := indices at: #moving.
 
-	newPosition := (aKeyboardEvent commandKeyPressed or: [
-		                aKeyboardEvent controlKeyPressed ])
+	newPosition := ctrlPressed
 		               ifTrue: [ specialBlock value: caretPosition ]
 		               ifFalse: [ directionBlock value: caretPosition ].
 
-	shift
+	shiftPressed
 		ifTrue: [
 		self selectMark: (indices at: #fixed) point: newPosition - 1 ]
 		ifFalse: [ self selectAt: newPosition ].
@@ -1661,6 +1661,41 @@ RubTextEditor >> moveCursor: directionBlock forward: forward specialBlock: speci
 	textArea requestTextEditingAt:
 		(textArea cursor positionInWorld corner:
 			 textArea cursor positionInWorld)
+]
+
+{ #category : 'private' }
+RubTextEditor >> moveCursor: directionBlock forward: forward specialBlock: specialBlock event: aKeyboardEvent [
+	"Private - Move cursor.
+	directionBlock is a one argument Block that computes the new Position from a given one.
+	specialBlock is a one argumentBlock that computes the new position from a given one under the alternate semantics.
+	Note that directionBlock always is evaluated first."
+
+	| shift ctrl |
+	shift := aKeyboardEvent shiftPressed.
+	ctrl := aKeyboardEvent commandKeyPressed or: [ aKeyboardEvent controlKeyPressed ].
+	
+	^ self
+		  moveCursor: directionBlock
+		  forward: forward
+		  specialBlock: specialBlock
+		  ctrlPressed: ctrl
+		  shiftPressed: shift
+]
+
+{ #category : 'private' }
+RubTextEditor >> moveCursor: aRubCursorAction shiftPressed: shiftPressed [
+
+	| indices caretPosition newPosition |
+	indices := self setIndices: shiftPressed forward: aRubCursorAction isForward.
+	caretPosition := indices at: #moving.
+
+	newPosition := aRubCursorAction moveFromPosition: caretPosition inEditor: self.
+	shiftPressed
+		ifTrue: [ self selectMark: (indices at: #fixed) point: newPosition - 1 ]
+		ifFalse: [ self selectAt: newPosition ].
+	self setEmphasisHereFromTextForward: aRubCursorAction isForward.
+
+	textArea requestTextEditingAt: (textArea cursor positionInWorld corner: textArea cursor positionInWorld)
 ]
 
 { #category : 'nesting' }
@@ -1780,6 +1815,17 @@ RubTextEditor >> offerFontMenu: aKeyboardEvent [
 	self closeTypeIn.
 	self offerFontMenu.
 	^ true
+]
+
+{ #category : 'cursor' }
+RubTextEditor >> offsetToVisualColumn: line ofColumn: columnIndex [
+
+	^ (line first to: line first + columnIndex - 1)
+		  inject: 0
+		  into: [ :visualColumn :index |
+				  visualColumn + (self
+					   visualCharacterSize: (self characterAt: index)
+					   atOffset: visualColumn) ]
 ]
 
 { #category : 'typing support' }
@@ -2093,7 +2139,7 @@ RubTextEditor >> sameColumn: start newLine: lineBlock forward: isForward [
 	The position inside the line will be preserved as good as possible"
 	"The boolean isForward is used in the border case to determine if
 	we should move to the beginning or the end of the line."
-	| column currentLine offsetAtTargetLine targetEOL lines numberOfLines currentLineNumber targetLineNumber |
+	| currentLine offsetAtTargetLine targetEOL lines numberOfLines currentLineNumber targetLineNumber targetLine visualColumn virtualColumn |
 	self walkAlongDisplayedLine
 		ifTrue: [lines := self paragraph lines.
 			numberOfLines := self paragraph numberOfLines.
@@ -2105,16 +2151,25 @@ RubTextEditor >> sameColumn: start newLine: lineBlock forward: isForward [
 				detect:[:lineInterval | lineInterval last >= start]
 				ifNone:[lines last].
 			currentLineNumber := currentLine second].
-	column := start - currentLine first.
+
+	virtualColumn := start - currentLine first.
+	textArea visualColumn ifNil: [
+		textArea visualColumn: (self offsetToVisualColumn: currentLine ofColumn: virtualColumn)
+	].
+
+	visualColumn := textArea visualColumn.
+	
 	targetLineNumber := ((lineBlock value: currentLineNumber) max: 1) min: numberOfLines.
-	offsetAtTargetLine := (lines at: targetLineNumber) first.
-	targetEOL := (lines at: targetLineNumber) last + (targetLineNumber = numberOfLines ifTrue:[1]ifFalse:[0]).
+	targetLine := lines at: targetLineNumber.
+	offsetAtTargetLine := targetLine first.
+	targetEOL := targetLine last + (targetLineNumber = numberOfLines ifTrue: [1] ifFalse: [0]).
 	targetLineNumber = currentLineNumber
 	"No movement or movement failed. Move to beginning or end of line."
 		ifTrue:[^isForward
 			ifTrue:[targetEOL]
 			ifFalse:[offsetAtTargetLine]].
-	^offsetAtTargetLine + column min: targetEOL
+	
+	^ offsetAtTargetLine + (self visualToOffsetColumn: targetLine ofColumn: visualColumn) min: targetEOL
 ]
 
 { #category : 'menu messages' }
@@ -2757,6 +2812,41 @@ RubTextEditor >> unselect [
 RubTextEditor >> visibleHeight [
 
 	^textArea owner bounds height
+]
+
+{ #category : 'cursor' }
+RubTextEditor >> visualCharacterSize: aCharacter atOffset: anOffset [ 
+	
+	| tabSize |
+	aCharacter = Character tab ifFalse: [ ^1 ].
+	
+	tabSize := EFFormatter numberOfSpacesInIndent.
+	
+	^ tabSize - (anOffset rem: tabSize)
+]
+
+{ #category : 'cursor' }
+RubTextEditor >> visualToOffsetColumn: line ofColumn: columnIndex [
+
+	| visualIndex offset |
+	offset := 0.
+	visualIndex := 0.
+
+	[
+	visualIndex < columnIndex and: [ offset < (line last - line first) ] ]
+		whileTrue: [
+				| currentChar |
+				currentChar := self characterAt: line first + offset.
+				visualIndex := visualIndex
+				               +
+				               (self
+					                visualCharacterSize: currentChar
+					                atOffset: visualIndex).
+				offset := offset + 1 ].
+
+	^ visualIndex > columnIndex
+		  ifTrue: [ offset - 1 ]
+		  ifFalse: [ offset ]
 ]
 
 { #category : 'settings' }
