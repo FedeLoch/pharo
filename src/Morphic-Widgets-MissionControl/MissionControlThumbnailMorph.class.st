@@ -58,6 +58,8 @@ MissionControlThumbnailMorph >> buildLabel [
 	title size > 30 ifTrue: [ title := (title first: 30) , '...' ].
 	labelMorph := StringMorph contents: title font: StandardFonts defaultFont.
 	labelMorph color: Color white.
+	self addMorph: labelMorph.
+	labelMorph position: ((self width - labelMorph width) // 2) @ (self height + 2).
 	^ labelMorph
 ]
 

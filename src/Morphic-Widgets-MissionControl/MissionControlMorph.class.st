@@ -4,7 +4,8 @@ Class {
 	#instVars : [
 		'thumbnails',
 		'spacesBar',
-		'isActive'
+		'isActive',
+		'scrollOffset'
 	],
 	#category : 'Morphic-Widgets-MissionControl',
 	#package : 'Morphic-Widgets-MissionControl'
@@ -27,6 +28,7 @@ MissionControlMorph >> activateInWorld: aWorld [
 	nonCollapsed := (aWorld systemWindows select: [ :w | w isCollapsed not ]).
 	collapsed := (aWorld systemWindows select: [ :w | w isCollapsed ]).
 	self bounds: aWorld bounds.
+	self clipSubmorphs: true.
 	spacesBar := MissionControlSpacesBar new
 		initializeForWorld: aWorld
 		collapsedWindows: collapsed.
@@ -76,42 +78,39 @@ MissionControlMorph >> isActive [
 
 { #category : 'private' }
 MissionControlMorph >> createThumbnailsFor: windows [
-	| padding available n cols rows cellW cellH labelHeight scale thumbExtent |
+	| padding n minCellW cols rows cellW cellH labelHeight gridHeight |
 	thumbnails := OrderedCollection new.
+	scrollOffset := 0.
 	n := windows size.
 	n = 0 ifTrue: [ ^ self ].
 	padding := MissionControlSettings thumbnailPadding.
-	available := self bounds insetBy: padding.
-	available := available withTop: (available top + spacesBar height + padding).
 	labelHeight := MissionControlSettings showWindowLabels
 		ifTrue: [ StandardFonts defaultFont height + 4 ]
 		ifFalse: [ 0 ].
-	cols := n sqrt ceiling.
-	rows := (n / cols) ceiling.
-	cellW := available width / cols.
-	cellH := (available height - (labelHeight * rows)) / rows.
+	minCellW := 200.
+	cols := ((self width - padding left - padding right) / minCellW) floor max: 1.
+	rows := (n + cols - 1) // cols.
+	cellW := (self width - padding left - padding right) / cols.
+	cellH := (cellW * 0.75) max: 120.
+	gridHeight := spacesBar height + padding top + (rows * (cellH + labelHeight)) + padding bottom.
+	self setProperty: #totalContentHeight toValue: gridHeight.
 	windows withIndexDo: [ :w :i |
-		| col row thumbnail cellLeft cellTop label lm |
+		| col row thumbnail scale thumbExtent cellLeft cellTop basePos |
 		col := (i - 1) \\ cols.
 		row := (i - 1) // cols.
-		scale := (cellW / w extent x) min: (cellH / w extent y).
-		scale := scale min: 1.0.
+		scale := (cellW / w extent x) min: (cellH / w extent y) min: 1.0.
 		thumbExtent := (w extent * scale) rounded.
 		thumbnail := MissionControlThumbnailMorph new
 			initializeForWindow: w extent: thumbExtent.
 		self addMorph: thumbnail.
 		thumbnails add: thumbnail.
-		cellLeft := available left + (col * cellW).
-		cellTop := available top + (row * (cellH + labelHeight)).
-		thumbnail
-			position: (cellLeft + ((cellW - thumbExtent x) // 2))
-				@ (cellTop + ((cellH - thumbExtent y) // 2)).
+		cellLeft := padding left + (col * cellW).
+		cellTop := spacesBar height + padding top + (row * (cellH + labelHeight)).
+		basePos := cellLeft @ cellTop.
+		thumbnail setProperty: #basePosition toValue: basePos.
+		thumbnail position: basePos.
 		MissionControlSettings showWindowLabels ifTrue: [
-			lm := thumbnail buildLabel.
-			lm ifNotNil: [
-				lm position: (cellLeft + ((cellW - lm width) // 2))
-					@ (thumbnail position y + thumbExtent y + 2).
-				self addMorph: lm ] ]
+			thumbnail buildLabel ]
 	]
 ]
 
@@ -144,6 +143,37 @@ MissionControlMorph >> handlesKeyDown: evt [
 { #category : 'event handling' }
 MissionControlMorph >> keyDown: evt [
 	evt keyCharacter = Character escape ifTrue: [ ^ self deactivate ]
+]
+
+{ #category : 'event handling' }
+MissionControlMorph >> handlesMouseWheel: evt [
+	^ (self valueOfProperty: #totalContentHeight ifAbsent: [0]) > self height
+]
+
+{ #category : 'event handling' }
+MissionControlMorph >> mouseWheel: evt [
+	| contentHeight visibleHeight maxOff step |
+	evt wasHandled ifTrue: [ ^ self ].
+	contentHeight := self valueOfProperty: #totalContentHeight ifAbsent: [0].
+	visibleHeight := self height - spacesBar height.
+	maxOff := (contentHeight - visibleHeight) max: 0.
+	maxOff = 0 ifTrue: [ ^ self ].
+	step := 60.
+	evt isDown ifTrue: [
+		scrollOffset := (scrollOffset + step) min: maxOff ].
+	evt isUp ifTrue: [
+		scrollOffset := (scrollOffset - step) max: 0 ].
+	self applyScrollOffset
+]
+
+{ #category : 'private' }
+MissionControlMorph >> applyScrollOffset [
+	thumbnails do: [ :t |
+		| basePos |
+		basePos := t valueOfProperty: #basePosition.
+		basePos ifNotNil: [
+			t position: basePos x @ (basePos y - scrollOffset) ]
+	]
 ]
 
 { #category : 'wiw support' }
