@@ -98,7 +98,7 @@ MissionControlMorph >> createThumbnailsFor: windows [
 		| col row thumbnail scale thumbExtent cellLeft cellTop basePos |
 		col := (i - 1) \\ cols.
 		row := (i - 1) // cols.
-		scale := (cellW / w extent x) min: (cellH / w extent y) min: 1.0.
+		scale := ((cellW / w extent x) min: (cellH / w extent y)) min: 1.0.
 		thumbExtent := (w extent * scale) rounded.
 		thumbnail := MissionControlThumbnailMorph new
 			initializeForWindow: w extent: thumbExtent.
