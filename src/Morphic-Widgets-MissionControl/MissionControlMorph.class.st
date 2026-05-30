@@ -88,11 +88,11 @@ MissionControlMorph >> createThumbnailsFor: windows [
 		ifTrue: [ StandardFonts defaultFont height + 4 ]
 		ifFalse: [ 0 ].
 	minCellW := 200.
-	cols := ((self width - padding left - padding right) / minCellW) floor max: 1.
+	cols := ((self width - padding - padding) / minCellW) floor max: 1.
 	rows := (n + cols - 1) // cols.
-	cellW := (self width - padding left - padding right) / cols.
+	cellW := (self width - padding - padding) / cols.
 	cellH := (cellW * 0.75) max: 120.
-	gridHeight := spacesBar height + padding top + (rows * (cellH + labelHeight)) + padding bottom.
+	gridHeight := spacesBar height + padding + (rows * (cellH + labelHeight)) + padding.
 	self setProperty: #totalContentHeight toValue: gridHeight.
 	windows withIndexDo: [ :w :i |
 		| col row thumbnail scale thumbExtent cellLeft cellTop basePos |
@@ -104,8 +104,8 @@ MissionControlMorph >> createThumbnailsFor: windows [
 			initializeForWindow: w extent: thumbExtent.
 		self addMorph: thumbnail.
 		thumbnails add: thumbnail.
-		cellLeft := padding left + (col * cellW).
-		cellTop := spacesBar height + padding top + (row * (cellH + labelHeight)).
+		cellLeft := padding + (col * cellW).
+		cellTop := spacesBar height + padding + (row * (cellH + labelHeight)).
 		basePos := cellLeft @ cellTop.
 		thumbnail setProperty: #basePosition toValue: basePos.
 		thumbnail position: basePos.
