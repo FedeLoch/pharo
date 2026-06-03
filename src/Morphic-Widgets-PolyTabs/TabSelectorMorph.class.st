@@ -11,7 +11,8 @@ Class {
 		'tabs',
 		'controls',
 		'wrapScrolling',
-		'maxTabWidth'
+		'maxTabWidth',
+		'maxSwitcherWidth'
 	],
 	#category : 'Morphic-Widgets-PolyTabs',
 	#package : 'Morphic-Widgets-PolyTabs'
@@ -113,6 +114,19 @@ TabSelectorMorph >> maxTabWidth [
 TabSelectorMorph >> maxTabWidth: anInteger [
 	
 	maxTabWidth := anInteger
+]
+
+{ #category : 'accessing' }
+TabSelectorMorph >> maxSwitcherWidth [
+	"Answer the maximum width of the tab switcher. 0 means no cap."
+	
+	^maxSwitcherWidth ifNil: [0]
+]
+
+{ #category : 'accessing' }
+TabSelectorMorph >> maxSwitcherWidth: anInteger [
+	
+	maxSwitcherWidth := anInteger
 ]
 
 { #category : 'operations' }
@@ -231,7 +245,8 @@ TabSelectorMorph >> initialize [
 		visibleTabRange: (1 to: 0);
 		controls: self newControls;
 		roundedCorners: #(1 4);
-		borderWidth: 0;
+		borderWidth: (1 scaledByDisplayScaleFactor);
+		borderColor: (Color gray alpha: 0.4);
 		changeTableLayout;
 		listDirection: #leftToRight;
 		cellInset: (self theme tabSelectorCellInsetFor: self)
@@ -570,6 +585,8 @@ TabSelectorMorph >> updateTabs [
 			clipSubmorphs: false].
 
 	availableWidth := self layoutBounds width.
+	self maxSwitcherWidth > 0 ifTrue: [
+		availableWidth := availableWidth min: self maxSwitcherWidth].
 	self cornerStyle = #rounded ifTrue: [availableWidth := availableWidth - 6].
 	availableWidth <= 0 ifTrue: [
 		self addAllMorphs: tabsAndControls;
