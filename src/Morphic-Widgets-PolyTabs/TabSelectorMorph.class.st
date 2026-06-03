@@ -53,12 +53,15 @@ TabSelectorMorph >> addTab: aStringOrMorph selected: selectedStringOrMorph [
 
 { #category : 'geometry' }
 TabSelectorMorph >> basicMinExtent [
-	"Answer the unadjusted min extent."
+	"Answer the unadjusted min extent. Each tab's width is capped at maxTabWidth."
 
-	|minTabExtent|
+	|minTabExtent tabExtent|
 	self tabs ifEmpty: [^0@0].
 	minTabExtent := 0@0.
-	self tabs do: [:tab | minTabExtent := minTabExtent max: tab minExtent].
+	self tabs do: [:tab |
+		tabExtent := tab minExtent.
+		minTabExtent := (minTabExtent x max: (tabExtent x min: self maxTabWidth))
+			@ (minTabExtent y max: tabExtent y)].
 	^minTabExtent
 ]
 
