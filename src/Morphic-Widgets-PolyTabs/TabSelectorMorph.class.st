@@ -192,10 +192,13 @@ TabSelectorMorph >> ensureSelectedTabIsVisible [
 { #category : 'geometry' }
 TabSelectorMorph >> extent: aPoint [
 	"Set the extent of the receiver.
+	Caps width at maxSwitcherWidth if set.
 	Update the tabs."
 
 	self extent = aPoint ifTrue: [^self].
-	super extent: aPoint.
+	super extent: (self maxSwitcherWidth > 0
+		ifTrue: [aPoint x min: self maxSwitcherWidth @ aPoint y]
+		ifFalse: [aPoint]).
 	self
 		updateTabs;
 		ensureSelectedTabIsVisible
