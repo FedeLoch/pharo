@@ -10,7 +10,8 @@ Class {
 		'font',
 		'tabs',
 		'controls',
-		'wrapScrolling'
+		'wrapScrolling',
+		'maxTabWidth'
 	],
 	#category : 'Morphic-Widgets-PolyTabs',
 	#package : 'Morphic-Widgets-PolyTabs'
@@ -54,15 +55,11 @@ TabSelectorMorph >> addTab: aStringOrMorph selected: selectedStringOrMorph [
 TabSelectorMorph >> basicMinExtent [
 	"Answer the unadjusted min extent."
 
-	|minTabExtent controlExtent controlsExtent|
-	controlsExtent := 0@0.
-	self controls do: [:control |
-		controlExtent := control minExtent.
-		controlsExtent := controlsExtent x + controlExtent x @ (controlsExtent y max: controlExtent y)].
-	self tabs ifEmpty: [^controlsExtent].
+	|minTabExtent|
+	self tabs ifEmpty: [^0@0].
 	minTabExtent := 0@0.
 	self tabs do: [:tab | minTabExtent := minTabExtent max: tab minExtent].
-	^minTabExtent x + controlsExtent x @ (minTabExtent y max: controlsExtent y)
+	^minTabExtent
 ]
 
 { #category : 'tabs' }
@@ -100,6 +97,19 @@ TabSelectorMorph >> calculateVisibleTabs [
 					accumulatedWidth := accumulatedWidth + widthStr next ].
 			accumulatedWidth > availableWidth ifTrue: [ answer removeLast ].
 			answer ]
+]
+
+{ #category : 'accessing' }
+TabSelectorMorph >> maxTabWidth [
+	"Answer the maximum width for a single tab."
+	
+	^maxTabWidth ifNil: [200 * self displayScaleFactor]
+]
+
+{ #category : 'accessing' }
+TabSelectorMorph >> maxTabWidth: anInteger [
+	
+	maxTabWidth := anInteger
 ]
 
 { #category : 'operations' }
@@ -516,25 +526,13 @@ TabSelectorMorph >> tabs: anObject [
 
 { #category : 'tabs' }
 TabSelectorMorph >> tabsAndControls [
-	"Answer the tabs and scrolling controls that should be visible given the space."
+	"Answer all the tabs (scrolling controls no longer used — tabs scale to fit)."
 
-	|visibleTabs firstIndex|
 	self tabs ifEmpty: [
 		self visibleTabRange: (1 to: 0).
 		^#()].
-	visibleTabs := self calculateVisibleTabs.
-	visibleTabs ifEmpty: [
-		self visibleTabRange: (1 to: 0).
-		^#()].
-	firstIndex := self tabs indexOf: visibleTabs first.
-	self visibleTabRange: (firstIndex to: firstIndex + visibleTabs size - 1).
-	visibleTabs size = self tabs size ifFalse: [
-		visibleTabs
-			add: self newSpacer;
-			addAll: self controls.
-		self cornerStyle = #rounded
-			ifTrue: [visibleTabs add: self newEndSpacer]].
-	^visibleTabs
+	self visibleTabRange: (1 to: self tabs size).
+	^self tabs
 ]
 
 { #category : 'operations' }
@@ -554,17 +552,35 @@ TabSelectorMorph >> updateFont [
 
 { #category : 'tabs' }
 TabSelectorMorph >> updateTabs [
-	"Update the submorphs based on visible tabs."
+	"Update the submorphs. When tabs exceed available width, scale them proportionally to fit."
 
-	|tabsAndControls selectedTab|
+	|tabsAndControls selectedTab availableWidth naturalWidths totalNaturalWidth scaleFactor|
 	tabsAndControls := self tabsAndControls.
 	self removeAllMorphs.
 	tabsAndControls ifEmpty: [^self].
 	selectedTab := self selectedTab.
 	self tabs do: [:t |
 		t selected: (t == selectedTab)].
+
+	availableWidth := self layoutBounds width.
+	self cornerStyle = #rounded ifTrue: [availableWidth := availableWidth - 6].
+	naturalWidths := tabsAndControls collect: [:t |
+		(t minExtent x min: self maxTabWidth) max: t minWidth].
+	totalNaturalWidth := naturalWidths sum.
+
+	totalNaturalWidth > availableWidth ifTrue: [
+		scaleFactor := availableWidth / totalNaturalWidth.
+		tabsAndControls with: naturalWidths do: [:t :nw |
+			t hResizing: #rigid;
+				clipSubmorphs: true;
+				width: ((nw * scaleFactor) max: t minWidth) rounded]]
+	ifFalse: [
+		tabsAndControls do: [:t |
+			t hResizing: #shrinkWrap;
+				clipSubmorphs: false]].
+
 	self
-		addAllMorphs: self tabsAndControls;
+		addAllMorphs: tabsAndControls;
 		adoptPaneColor
 ]
 
