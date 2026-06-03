@@ -584,7 +584,7 @@ TabSelectorMorph >> updateTabs [
 		tabsAndControls with: cappedWidths do: [:t :cw |
 			t hResizing: #rigid;
 				clipSubmorphs: true;
-				width: ((cw * scaleFactor) rounded max: t minWidth)]].
+				width: ((cw * scaleFactor) rounded max: self theme buttonMinWidth)]].
 
 	self
 		addAllMorphs: tabsAndControls;
