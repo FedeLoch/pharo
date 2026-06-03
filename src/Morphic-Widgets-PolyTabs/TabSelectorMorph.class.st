@@ -557,7 +557,7 @@ TabSelectorMorph >> updateFont [
 TabSelectorMorph >> updateTabs [
 	"Update the submorphs. When tabs exceed available width, scale them proportionally to fit."
 
-	|tabsAndControls selectedTab availableWidth naturalWidths totalNaturalWidth scaleFactor|
+	|tabsAndControls selectedTab availableWidth cappedWidths totalCappedWidth scaleFactor|
 	tabsAndControls := self tabsAndControls.
 	self removeAllMorphs.
 	tabsAndControls ifEmpty: [^self].
@@ -565,22 +565,26 @@ TabSelectorMorph >> updateTabs [
 	self tabs do: [:t |
 		t selected: (t == selectedTab)].
 
+	"Reset to shrinkWrap so minWidth reflects true content size"
+	tabsAndControls do: [:t |
+		t hResizing: #shrinkWrap;
+			clipSubmorphs: false].
+
 	availableWidth := self layoutBounds width.
 	self cornerStyle = #rounded ifTrue: [availableWidth := availableWidth - 6].
-	naturalWidths := tabsAndControls collect: [:t |
-		(t minExtent x min: self maxTabWidth) max: t minWidth].
-	totalNaturalWidth := naturalWidths sum.
+	availableWidth <= 0 ifTrue: [
+		self addAllMorphs: tabsAndControls;
+			adoptPaneColor.
+		^self].
 
-	totalNaturalWidth > availableWidth ifTrue: [
-		scaleFactor := availableWidth / totalNaturalWidth.
-		tabsAndControls with: naturalWidths do: [:t :nw |
+	cappedWidths := tabsAndControls collect: [:t | t minWidth min: self maxTabWidth].
+	totalCappedWidth := cappedWidths sum.
+	totalCappedWidth > availableWidth ifTrue: [
+		scaleFactor := availableWidth / totalCappedWidth.
+		tabsAndControls with: cappedWidths do: [:t :cw |
 			t hResizing: #rigid;
 				clipSubmorphs: true;
-				width: ((nw * scaleFactor) max: t minWidth) rounded]]
-	ifFalse: [
-		tabsAndControls do: [:t |
-			t hResizing: #shrinkWrap;
-				clipSubmorphs: false]].
+				width: ((cw * scaleFactor) rounded max: t minWidth)]].
 
 	self
 		addAllMorphs: tabsAndControls;
