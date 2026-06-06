@@ -12,7 +12,8 @@ Class {
 		'wrapAround',
 		'searchBackwards',
 		'findStartIndex',
-		'isRegex'
+		'isRegex',
+		'preserveCase'
 	],
 	#category : 'Rubric-Editing-FindReplaceService',
 	#package : 'Rubric',
@@ -55,6 +56,17 @@ FindReplaceService >> entireWordsOnly [
 { #category : 'accessing' }
 FindReplaceService >> entireWordsOnly: aBoolean [
 	entireWordsOnly := aBoolean.
+	self findPolicyChanged
+]
+
+{ #category : 'accessing' }
+FindReplaceService >> preserveCase [
+	^ preserveCase ifNil: [ preserveCase := false ]
+]
+
+{ #category : 'accessing' }
+FindReplaceService >> preserveCase: aBoolean [
+	preserveCase := aBoolean.
 	self findPolicyChanged
 ]
 

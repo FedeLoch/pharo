@@ -1,20 +1,24 @@
 "
-I am a compact search bar for finding and replacing text in a text area, inspired by VS Code's find widget.
+I am a compact search bar for finding and replacing text in a text area, matching VS Code's find widget layout.
 
 I appear near the top-right of the text area and provide:
-- A find text field with live matching as you type
+- A search input with embedded toggle buttons (Aa, ab, .*)
+- Live incremental matching as you type
+- Match count display showing ''N of M''
 - Match navigation via Enter/Shift+Enter and arrow buttons
-- Match count display showing ''current/total''
-- Toggle buttons for case sensitive, whole words only, and regular expression
-- An expandable replace mode with Replace and Replace All
+- An expandable replace row with Preserve Case, Replace, and Replace All
 - Close via Escape or the close button
+
+I am managed by a FindReplaceService.
 "
 Class {
 	#name : 'RubFindReplaceSearchBar',
 	#superclass : 'BorderedMorph',
 	#instVars : [
 		'findField',
+		'findFieldContainer',
 		'replaceField',
+		'replaceFieldContainer',
 		'matchCountLabel',
 		'regexButton',
 		'caseButton',
@@ -25,9 +29,11 @@ Class {
 		'nextButton',
 		'replaceButton',
 		'replaceAllButton',
+		'preserveCaseButton',
 		'service',
 		'replaceRow',
-		'isExpanded'
+		'isExpanded',
+		'hasNoResults'
 	],
 	#category : 'Rubric-Editing-FindReplaceService',
 	#package : 'Rubric',
@@ -50,6 +56,7 @@ RubFindReplaceSearchBar >> service: aFindReplaceService [
 RubFindReplaceSearchBar >> initialize [
 	super initialize.
 	isExpanded := false.
+	hasNoResults := false.
 	self
 		changeTableLayout;
 		listDirection: #topToBottom;
@@ -60,7 +67,7 @@ RubFindReplaceSearchBar >> initialize [
 		borderColor: self theme borderColor;
 		color: self theme backgroundColor;
 		cornerStyle: #rounded;
-		extent: 380 @ 26.
+		extent: 400 @ 26.
 	self initializeFindRow.
 	self initializeReplaceRow.
 	self hideReplaceRow
@@ -72,13 +79,10 @@ RubFindReplaceSearchBar >> initializeFindRow [
 	row := self newRow.
 	row
 		addMorphBack: self newExpandButton;
-		addMorphBack: self newFindField;
+		addMorphBack: self newFindFieldContainer;
 		addMorphBack: self newMatchCountLabel;
 		addMorphBack: self newPrevButton;
 		addMorphBack: self newNextButton;
-		addMorphBack: self newCaseButton;
-		addMorphBack: self newWordButton;
-		addMorphBack: self newRegexButton;
 		addMorphBack: self newCloseButton.
 	self addMorphBack: row
 ]
@@ -87,24 +91,59 @@ RubFindReplaceSearchBar >> initializeFindRow [
 RubFindReplaceSearchBar >> initializeReplaceRow [
 	replaceRow := self newRow.
 	replaceRow
-		addMorphBack: self newReplaceField;
+		addMorphBack: self newReplaceSpacer;
+		addMorphBack: self newReplaceFieldContainer;
 		addMorphBack: self newReplaceButton;
 		addMorphBack: self newReplaceAllButton.
 	self addMorphBack: replaceRow
+]
+
+{ #category : 'submorphs - containers' }
+RubFindReplaceSearchBar >> newInputContainer [
+	^ PanelMorph new
+		changeTableLayout;
+		listDirection: #leftToRight;
+		cellInset: 0;
+		hResizing: #spaceFill;
+		vResizing: #rigid;
+		height: 26;
+		borderWidth: 1;
+		borderColor: self theme borderColor;
+		color: self theme backgroundColor;
+		cornerStyle: #rounded;
+		yourself
+]
+
+{ #category : 'submorphs - containers' }
+RubFindReplaceSearchBar >> newFindFieldContainer [
+	findFieldContainer := self newInputContainer.
+	findFieldContainer
+		addMorphBack: self newFindField;
+		addMorphBack: self newCaseButton;
+		addMorphBack: self newWordButton;
+		addMorphBack: self newRegexButton.
+	^ findFieldContainer
+]
+
+{ #category : 'submorphs - containers' }
+RubFindReplaceSearchBar >> newReplaceFieldContainer [
+	replaceFieldContainer := self newInputContainer.
+	replaceFieldContainer
+		addMorphBack: self newReplaceField;
+		addMorphBack: self newPreserveCaseButton.
+	^ replaceFieldContainer
 ]
 
 { #category : 'submorphs - find row' }
 RubFindReplaceSearchBar >> newFindField [
 	findField := RubPluggableTextFieldMorph new.
 	findField
-		ghostText: 'Find';
+		ghostText: 'Search';
 		acceptOnCR: false;
 		hResizing: #spaceFill;
-		vResizing: #rigid;
-		height: 20;
-		color: self theme backgroundColor;
-		borderWidth: 1;
-		borderColor: self theme borderColor;
+		vResizing: #spaceFill;
+		borderWidth: 0;
+		color: Color transparent;
 		changedAction: [ :t | self onFindTextChanged ].
 	findField textArea announcer
 		when: RubKeystroke send: #onFindFieldKeystroke: to: self.
@@ -125,7 +164,7 @@ RubFindReplaceSearchBar >> newMatchCountLabel [
 { #category : 'submorphs - find row' }
 RubFindReplaceSearchBar >> newPrevButton [
 	^ prevButton := self
-		createCompactButtonLabeled: '▲'
+		createCompactButtonLabeled: '↑'
 		getState: nil
 		action: #findPrevious
 ]
@@ -133,7 +172,7 @@ RubFindReplaceSearchBar >> newPrevButton [
 { #category : 'submorphs - find row' }
 RubFindReplaceSearchBar >> newNextButton [
 	^ nextButton := self
-		createCompactButtonLabeled: '▼'
+		createCompactButtonLabeled: '↓'
 		getState: nil
 		action: #findNext
 ]
@@ -165,7 +204,7 @@ RubFindReplaceSearchBar >> newWordButton [
 { #category : 'submorphs - find row' }
 RubFindReplaceSearchBar >> newExpandButton [
 	^ expandButton := self
-		createCompactButtonLabeled: '▸'
+		createCompactButtonLabeled: '›'
 		getState: nil
 		action: #toggleReplaceMode
 ]
@@ -179,32 +218,51 @@ RubFindReplaceSearchBar >> newCloseButton [
 ]
 
 { #category : 'submorphs - replace row' }
+RubFindReplaceSearchBar >> newReplaceSpacer [
+	^ Morph new
+		hResizing: #rigid;
+		vResizing: #rigid;
+		width: 20;
+		height: 26;
+		color: Color transparent;
+		yourself
+]
+
+{ #category : 'submorphs - replace row' }
 RubFindReplaceSearchBar >> newReplaceField [
 	replaceField := RubPluggableTextFieldMorph new.
 	replaceField
 		ghostText: 'Replace';
 		acceptOnCR: false;
 		hResizing: #spaceFill;
-		vResizing: #rigid;
-		height: 20;
-		color: self theme backgroundColor;
-		borderWidth: 1;
-		borderColor: self theme borderColor;
+		vResizing: #spaceFill;
+		borderWidth: 0;
+		color: Color transparent;
 		changedAction: [ :t | service replaceText: t ].
 	^ replaceField
 ]
 
 { #category : 'submorphs - replace row' }
+RubFindReplaceSearchBar >> newPreserveCaseButton [
+	^ preserveCaseButton := self
+		createCompactButtonLabeled: 'AB'
+		getState: #isPreserveCase
+		action: #togglePreserveCase
+]
+
+{ #category : 'submorphs - replace row' }
 RubFindReplaceSearchBar >> newReplaceButton [
 	^ replaceButton := self
-		createActionButtonLabeled: 'Replace'
+		createCompactButtonLabeled: '⎘'
+		getState: nil
 		action: #replace
 ]
 
 { #category : 'submorphs - replace row' }
 RubFindReplaceSearchBar >> newReplaceAllButton [
 	^ replaceAllButton := self
-		createActionButtonLabeled: 'All'
+		createCompactButtonLabeled: '⎘⎘'
+		getState: nil
 		action: #replaceAll
 ]
 
@@ -213,7 +271,7 @@ RubFindReplaceSearchBar >> newRow [
 	^ PanelMorph new
 		changeTableLayout;
 		listDirection: #leftToRight;
-		cellInset: 3;
+		cellInset: 4;
 		hResizing: #spaceFill;
 		vResizing: #shrinkWrap;
 		borderWidth: 0;
@@ -226,7 +284,7 @@ RubFindReplaceSearchBar >> createCompactButtonLabeled: aString getState: getSel 
 	| btn |
 	btn := PluggableButtonMorph on: self getState: getSel action: actSel.
 	btn
-		label: aString font: (StandardFonts defaultFont pointSize: 9);
+		label: aString font: (StandardFonts defaultFont pointSize: 10);
 		cornerStyle: #rounded;
 		hResizing: #rigid;
 		vResizing: #rigid;
@@ -235,22 +293,6 @@ RubFindReplaceSearchBar >> createCompactButtonLabeled: aString getState: getSel 
 		borderWidth: 0.
 	btn setProperty: #normalColor toValue: Color transparent.
 	btn setProperty: #activeColor toValue: self theme selectionColor.
-	^ btn
-]
-
-{ #category : 'helpers' }
-RubFindReplaceSearchBar >> createActionButtonLabeled: aString action: actSel [
-	| btn |
-	btn := PluggableButtonMorph on: self getState: nil action: actSel.
-	btn
-		label: aString font: (StandardFonts defaultFont pointSize: 9);
-		cornerStyle: #rounded;
-		hResizing: #rigid;
-		vResizing: #rigid;
-		extent: (aString size * 7 + 10) @ 20;
-		color: self theme backgroundColor;
-		borderWidth: 1;
-		borderColor: self theme borderColor.
 	^ btn
 ]
 
@@ -319,12 +361,20 @@ RubFindReplaceSearchBar >> toggleWholeWord [
 ]
 
 { #category : 'actions' }
+RubFindReplaceSearchBar >> togglePreserveCase [
+	service preserveCase: service preserveCase not.
+	service setStartIndex.
+	service findAndSelectRegex.
+	self updateMatchCount
+]
+
+{ #category : 'actions' }
 RubFindReplaceSearchBar >> toggleReplaceMode [
 	isExpanded := isExpanded not.
 	isExpanded
 		ifTrue: [ self showReplaceRow ]
 		ifFalse: [ self hideReplaceRow ].
-	expandButton label: (isExpanded ifTrue: [ '▾' ] ifFalse: [ '▸' ])
+	expandButton label: (isExpanded ifTrue: [ '⌄' ] ifFalse: [ '›' ])
 ]
 
 { #category : 'actions' }
@@ -355,15 +405,20 @@ RubFindReplaceSearchBar >> updateMatchCount [
 	text := service textArea text asString.
 	regex := service findRegex.
 	(regex isNil or: [ text isEmpty or: [ findField text asString isEmpty ] ])
-		ifTrue: [ ^ matchCountLabel contents: '' ].
+		ifTrue: [
+			self clearNoResults.
+			^ matchCountLabel contents: '' ].
 	ranges := regex matchingRangesIn: text.
 	count := ranges size.
-	count = 0 ifTrue: [ ^ matchCountLabel contents: 'No matches' ].
+	count = 0 ifTrue: [
+		self setNoResults.
+		^ matchCountLabel contents: 'No results' ].
+	self clearNoResults.
 	currentIdx := self currentMatchIndexAmong: ranges.
 	^ matchCountLabel contents:
 		(currentIdx > 0
-			ifTrue: [ currentIdx asString , '/' , count asString ]
-			ifFalse: [ count asString , ' matches' ])
+			ifTrue: [ currentIdx asString , ' of ' , count asString ]
+			ifFalse: [ count asString , ' of ' , count asString ])
 ]
 
 { #category : 'updating' }
@@ -373,6 +428,22 @@ RubFindReplaceSearchBar >> currentMatchIndexAmong: ranges [
 	ranges withIndexDo: [ :r :i |
 		(r first = sel first and: [ r last = sel last ]) ifTrue: [ ^ i ] ].
 	^ 0
+]
+
+{ #category : 'updating' }
+RubFindReplaceSearchBar >> setNoResults [
+	hasNoResults := true.
+	findFieldContainer borderColor: Color red.
+	findFieldContainer color: (Color red alpha: 0.08).
+	matchCountLabel color: Color red
+]
+
+{ #category : 'updating' }
+RubFindReplaceSearchBar >> clearNoResults [
+	hasNoResults := false.
+	findFieldContainer borderColor: self theme borderColor.
+	findFieldContainer color: self theme backgroundColor.
+	matchCountLabel color: self theme textColor
 ]
 
 { #category : 'updating' }
@@ -401,6 +472,11 @@ RubFindReplaceSearchBar >> isEntireWords [
 	^ service notNil and: [ service entireWordsOnly ]
 ]
 
+{ #category : 'testing' }
+RubFindReplaceSearchBar >> isPreserveCase [
+	^ service notNil and: [ service preserveCase ]
+]
+
 { #category : 'focus' }
 RubFindReplaceSearchBar >> findField [
 	^ findField
@@ -411,18 +487,14 @@ RubFindReplaceSearchBar >> themeChanged [
 	super themeChanged.
 	self borderColor: self theme borderColor.
 	self color: self theme backgroundColor.
-	findField ifNotNil: [
-		findField color: self theme backgroundColor.
-		findField borderColor: self theme borderColor ].
-	replaceField ifNotNil: [
-		replaceField color: self theme backgroundColor.
-		replaceField borderColor: self theme borderColor ].
+	findFieldContainer ifNotNil: [
+		hasNoResults ifFalse: [
+			findFieldContainer borderColor: self theme borderColor.
+			findFieldContainer color: self theme backgroundColor ] ].
+	replaceFieldContainer ifNotNil: [
+		replaceFieldContainer borderColor: self theme borderColor.
+		replaceFieldContainer color: self theme backgroundColor ].
 	matchCountLabel ifNotNil: [
-		matchCountLabel color: self theme textColor ].
-	replaceButton ifNotNil: [
-		replaceButton color: self theme backgroundColor.
-		replaceButton borderColor: self theme borderColor ].
-	replaceAllButton ifNotNil: [
-		replaceAllButton color: self theme backgroundColor.
-		replaceAllButton borderColor: self theme borderColor ]
+		hasNoResults ifFalse: [
+			matchCountLabel color: self theme textColor ] ]
 ]
