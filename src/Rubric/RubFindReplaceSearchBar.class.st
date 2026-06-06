@@ -369,17 +369,17 @@ RubFindReplaceSearchBar >> hideReplaceRow [
 
 { #category : 'testing' }
 RubFindReplaceSearchBar >> isRegex [
-	^ service isRegex
+	^ service notNil and: [ service isRegex ]
 ]
 
 { #category : 'testing' }
 RubFindReplaceSearchBar >> isCaseSensitive [
-	^ service caseSensitive
+	^ service notNil and: [ service caseSensitive ]
 ]
 
 { #category : 'testing' }
 RubFindReplaceSearchBar >> isEntireWords [
-	^ service entireWordsOnly
+	^ service notNil and: [ service entireWordsOnly ]
 ]
 
 { #category : 'focus' }
