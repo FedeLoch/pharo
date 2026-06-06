@@ -1,6 +1,6 @@
 "
-RubFindReplaceService default newDialog openInWorld
-RubFindReplaceService 
+I am the service for finding and replacing text in a Rubric text area.
+I manage a RubFindReplaceSearchBar that appears at the top of the text area.
 "
 Class {
 	#name : 'RubFindReplaceService',
@@ -27,10 +27,8 @@ RubFindReplaceService >> dialog [
 
 { #category : 'user-interface' }
 RubFindReplaceService >> dialogIsActiveFor: aTextArea [
-
-	dialog ifNil: [ ^ false ].
-
-	^ (self textArea = aTextArea) and: [ self dialog world isNotNil ]
+	^ dialog isNotNil
+		and: [ self textArea = aTextArea and: [ dialog world isNotNil ] ]
 ]
 
 { #category : 'services' }
@@ -107,11 +105,11 @@ RubFindReplaceService >> initialize [
 
 { #category : 'user-interface' }
 RubFindReplaceService >> newDialog [
-	| d |
-	d := RubFindReplaceDialogWindow new model: self.
-	d findPolicyChanged.
-	d announcer when: MorphDeleted send: #whenDialogDeleted to: self.
-	^ d
+	| bar |
+	bar := RubFindReplaceSearchBar new.
+	bar service: self.
+	bar announcer when: MorphDeleted send: #whenDialogDeleted to: self.
+	^ bar
 ]
 
 { #category : 'services' }
@@ -176,11 +174,25 @@ RubFindReplaceService >> whenDialogDeleted [
 
 { #category : 'events handling' }
 RubFindReplaceService >> whenFindReplaceWindowRequired: anAnnouncement [
+	(self dialogIsActiveFor: self textArea)
+		ifTrue: [
+			self dialog findField takeKeyboardFocus.
+			^ self ].
 	self findText
 		ifEmpty: [
 			self textArea hasSelection
 				ifTrue: [ self findText: self textArea selection ] ].
-	self dialog open
+	self dialog
+		openInWorld;
+		position: self positionForSearchBar.
+	self dialog findField takeKeyboardFocus
+]
+
+{ #category : 'events handling' }
+RubFindReplaceService >> positionForSearchBar [
+	| tb |
+	tb := self textArea boundsInWorld.
+	^ (tb right - 350) @ (tb top + 8)
 ]
 
 { #category : 'events handling' }
@@ -194,7 +206,7 @@ RubFindReplaceService >> whenTextAreaGotFocus: anAnnounce [
 
 { #category : 'events handling' }
 RubFindReplaceService >> whenTextAreaLostFocus: anAnnounce [
-	self dialog isInWorld ifFalse: [ ^self ].
+	(dialog isNil or: [ dialog isInWorld not ]) ifTrue: [ ^self ].
 	self textArea whenFindTextChanged: RubFindTextChanged new
 ]
 
