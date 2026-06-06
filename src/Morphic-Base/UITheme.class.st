@@ -4454,7 +4454,6 @@ UITheme >> taskbarMinimizedButtonColorFor: aButton [
 
 { #category : 'border-styles' }
 UITheme >> taskbarThumbnailBorderWidthFor: aMorph [
-	"Answer the corner style for the taskbar thumbnail/tasklist."
 
 	^ 0
 ]
