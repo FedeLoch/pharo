@@ -598,6 +598,12 @@ UIThemeColorConfigurator >> baseBorderColor [
 	^ Color veryLightGray
 ]
 
+{ #category : 'custom' }
+UIThemeColorConfigurator >> selectedTabBorderColor [
+
+	^ Color R: 55 G: 140 B: 240
+]
+
 { #category : 'basic-colors' }
 UIThemeColorConfigurator >> treeLineColorsFrom: aColor [
 

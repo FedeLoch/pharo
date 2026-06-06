@@ -309,6 +309,12 @@ UITheme >> baseBorderColor [
 ]
 
 { #category : 'accessing - colors' }
+UITheme >> selectedTabBorderColor [
+
+	^ colorPalette selectedTabBorderColor
+]
+
+{ #category : 'accessing - colors' }
 UITheme >> borderColor [
 
 	^ colorPalette borderColor

@@ -148,7 +148,7 @@ TaskListMorph >> hasCurrentWindows: currentTasks [
 { #category : 'private' }
 TaskListMorph >> highlightBorderColor [
 
-	^ Color R: 55 G: 140 B: 240
+	^ self theme selectedTabBorderColor
 ]
 
 { #category : 'initialization' }

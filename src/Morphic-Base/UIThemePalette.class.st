@@ -80,6 +80,12 @@ UIThemePalette >> baseBorderColor [
 ]
 
 { #category : 'colors' }
+UIThemePalette >> selectedTabBorderColor [
+
+	^ paletteDictionary at: #selectedTabBorderColor ifAbsentPut: [ colorConfigurator selectedTabBorderColor ]
+]
+
+{ #category : 'colors' }
 UIThemePalette >> borderColor [
 
 	^ paletteDictionary at: #borderColor ifAbsentPut: [ colorConfigurator borderColor ]
