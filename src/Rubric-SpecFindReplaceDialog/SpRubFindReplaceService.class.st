@@ -83,7 +83,7 @@ SpRubFindReplaceService >> positionForSearchBar [
 	ta := self textArea.
 	ta ifNil: [ ^ 0 @ 0 ].
 	worldBounds := ta boundsInWorld.
-	^ (worldBounds topRight x - 360) @ (worldBounds topRight y)
+	^ (worldBounds topRight x - 380) @ (worldBounds topRight y)
 ]
 
 { #category : 'services' }

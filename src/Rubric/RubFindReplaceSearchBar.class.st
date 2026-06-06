@@ -1,15 +1,13 @@
 "
-I am a compact search bar for finding and replacing text in a text area.
+I am a compact search bar for finding and replacing text in a text area, inspired by VS Code's find widget.
 
 I appear near the top-right of the text area and provide:
 - A find text field with live matching as you type
 - Match navigation via Enter/Shift+Enter and arrow buttons
 - Match count display showing ''current/total''
-- Toggle buttons for regular expression, case sensitive, whole words only
+- Toggle buttons for case sensitive, whole words only, and regular expression
 - An expandable replace mode with Replace and Replace All
 - Close via Escape or the close button
-
-I am managed by a RubFindReplaceService.
 "
 Class {
 	#name : 'RubFindReplaceSearchBar',
@@ -59,10 +57,9 @@ RubFindReplaceSearchBar >> initialize [
 		hResizing: #rigid;
 		vResizing: #shrinkWrap;
 		borderWidth: 1;
-		borderColor: (Color gray: 0.6);
-		color: Color paleBuff;
-		extent: 340 @ 26.
-
+		borderColor: (Color gray: 0.75);
+		color: (Color r: 0.965 g: 0.965 b: 0.965);
+		extent: 380 @ 26.
 	self initializeFindRow.
 	self initializeReplaceRow.
 	self hideReplaceRow
@@ -73,14 +70,14 @@ RubFindReplaceSearchBar >> initializeFindRow [
 	| row |
 	row := self newRow.
 	row
+		addMorphBack: self newExpandButton;
 		addMorphBack: self newFindField;
 		addMorphBack: self newMatchCountLabel;
 		addMorphBack: self newPrevButton;
 		addMorphBack: self newNextButton;
-		addMorphBack: self newRegexButton;
 		addMorphBack: self newCaseButton;
 		addMorphBack: self newWordButton;
-		addMorphBack: self newExpandButton;
+		addMorphBack: self newRegexButton;
 		addMorphBack: self newCloseButton.
 	self addMorphBack: row
 ]
@@ -103,6 +100,10 @@ RubFindReplaceSearchBar >> newFindField [
 		acceptOnCR: false;
 		hResizing: #spaceFill;
 		vResizing: #rigid;
+		height: 20;
+		color: (Color r: 0.98 g: 0.98 b: 0.98);
+		borderWidth: 1;
+		borderColor: (Color gray: 0.8);
 		changedAction: [ :t | self onFindTextChanged ].
 	findField textArea announcer
 		when: RubKeystroke send: #onFindFieldKeystroke: to: self.
@@ -114,7 +115,7 @@ RubFindReplaceSearchBar >> newMatchCountLabel [
 	^ matchCountLabel := StringMorph new
 		contents: '';
 		font: (StandardFonts defaultFont pointSize: 9);
-		color: (Color gray: 0.3);
+		color: (Color gray: 0.5);
 		vResizing: #rigid;
 		hResizing: #shrinkWrap;
 		yourself
@@ -184,6 +185,10 @@ RubFindReplaceSearchBar >> newReplaceField [
 		acceptOnCR: false;
 		hResizing: #spaceFill;
 		vResizing: #rigid;
+		height: 20;
+		color: (Color r: 0.98 g: 0.98 b: 0.98);
+		borderWidth: 1;
+		borderColor: (Color gray: 0.8);
 		changedAction: [ :t | service replaceText: t ].
 	^ replaceField
 ]
@@ -191,16 +196,14 @@ RubFindReplaceSearchBar >> newReplaceField [
 { #category : 'submorphs - replace row' }
 RubFindReplaceSearchBar >> newReplaceButton [
 	^ replaceButton := self
-		createCompactButtonLabeled: 'Replace'
-		getState: nil
+		createActionButtonLabeled: 'Replace'
 		action: #replace
 ]
 
 { #category : 'submorphs - replace row' }
 RubFindReplaceSearchBar >> newReplaceAllButton [
 	^ replaceAllButton := self
-		createCompactButtonLabeled: 'All'
-		getState: nil
+		createActionButtonLabeled: 'All'
 		action: #replaceAll
 ]
 
@@ -209,7 +212,7 @@ RubFindReplaceSearchBar >> newRow [
 	^ PanelMorph new
 		changeTableLayout;
 		listDirection: #leftToRight;
-		cellInset: 2;
+		cellInset: 3;
 		hResizing: #spaceFill;
 		vResizing: #shrinkWrap;
 		borderWidth: 0;
@@ -223,13 +226,30 @@ RubFindReplaceSearchBar >> createCompactButtonLabeled: aString getState: getSel 
 	btn := PluggableButtonMorph on: self getState: getSel action: actSel.
 	btn
 		label: aString font: (StandardFonts defaultFont pointSize: 9);
-		cornerStyle: #square;
+		cornerStyle: #rounded;
 		hResizing: #rigid;
 		vResizing: #rigid;
-		extent: 22 @ 20;
+		extent: 24 @ 22;
 		color: Color transparent;
+		borderWidth: 0.
+	btn setProperty: #normalColor toValue: Color transparent.
+	btn setProperty: #activeColor toValue: (Color gray: 0.88).
+	^ btn
+]
+
+{ #category : 'helpers' }
+RubFindReplaceSearchBar >> createActionButtonLabeled: aString action: actSel [
+	| btn |
+	btn := PluggableButtonMorph on: self getState: nil action: actSel.
+	btn
+		label: aString font: (StandardFonts defaultFont pointSize: 9);
+		cornerStyle: #rounded;
+		hResizing: #rigid;
+		vResizing: #rigid;
+		extent: (aString size * 7 + 10) @ 20;
+		color: (Color r: 0.95 g: 0.95 b: 0.95);
 		borderWidth: 1;
-		borderColor: Color transparent.
+		borderColor: (Color gray: 0.75).
 	^ btn
 ]
 

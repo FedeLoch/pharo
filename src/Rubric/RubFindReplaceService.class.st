@@ -192,7 +192,7 @@ RubFindReplaceService >> whenFindReplaceWindowRequired: anAnnouncement [
 RubFindReplaceService >> positionForSearchBar [
 	| tb |
 	tb := self textArea boundsInWorld.
-	^ (tb right - 350) @ (tb top + 8)
+	^ (tb right - 380) @ (tb top + 8)
 ]
 
 { #category : 'events handling' }
