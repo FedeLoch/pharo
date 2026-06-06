@@ -1,14 +1,12 @@
 "
-I am a FindReplace service that allows to use Spec based dialog as a replacement of a native Morphic find & replace dialog. 
-
-I can currently work only with the default Morphic Spec backend.
+I am a FindReplace service that uses the new inline RubFindReplaceWidget.
+I replace the old SpRubFindReplaceDialog-based approach.
 "
 Class {
 	#name : 'SpRubFindReplaceService',
 	#superclass : 'FindReplaceService',
 	#instVars : [
-		'dialog',
-		'dialogWindow',
+		'widget',
 		'textAreaHolder'
 	],
 	#category : 'Rubric-SpecFindReplaceDialog',
@@ -22,27 +20,13 @@ SpRubFindReplaceService >> caseSensitive [
 
 { #category : 'accessing' }
 SpRubFindReplaceService >> dialog [
-
-	^ dialog
+	^ self widget
 ]
 
 { #category : 'services' }
 SpRubFindReplaceService >> dialogIsActiveFor: aTextArea [
-
- ^ false
-]
-
-{ #category : 'accessing' }
-SpRubFindReplaceService >> dialogWindow [
-
-	^ dialogWindow
-]
-
-{ #category : 'events handling' }
-SpRubFindReplaceService >> discardDialog [
-
-	dialog := nil.
-	dialogWindow := nil
+	widget ifNil: [ ^ false ].
+	^ (self textArea = aTextArea) and: [ widget visible ]
 ]
 
 { #category : 'services' }
@@ -81,7 +65,6 @@ SpRubFindReplaceService >> findAndSelectRegex [
 
 { #category : 'services' }
 SpRubFindReplaceService >> findNext [
-
 	^ nil
 ]
 
@@ -91,7 +74,6 @@ SpRubFindReplaceService >> findPolicyChanged [
 
 { #category : 'accessing' }
 SpRubFindReplaceService >> findText: aStringOrText [
-
 	super findText: aStringOrText.
 	self textArea ifNotNil: [:textArea | textArea whenFindTextChanged: RubFindTextChanged new].
 	^ true
@@ -100,20 +82,21 @@ SpRubFindReplaceService >> findText: aStringOrText [
 { #category : 'initialization' }
 SpRubFindReplaceService >> initialize [
 	super initialize.
-
 	textAreaHolder := WeakArray new: 1
 ]
 
-{ #category : 'events handling' }
-SpRubFindReplaceService >> openDialog [
+{ #category : 'user-interface' }
+SpRubFindReplaceService >> newWidget [
+	| w |
+	w := RubFindReplaceWidget new.
+	w service: self.
+	w textArea: self textArea.
+	^ w
+]
 
-	| text |
-	text := findText asString.
-	dialog := SpRubFindReplaceDialog on: self.
-	dialog updateFromModel.
-	(text isNotEmpty and: [ text ~= dialog findInput text ]) ifTrue: [
-		dialog findInput text: text ].
-	dialogWindow := dialog openDialog 
+{ #category : 'services' }
+SpRubFindReplaceService >> openDialog [
+	self widget show
 ]
 
 { #category : 'services' }
@@ -176,16 +159,20 @@ SpRubFindReplaceService >> updateFindStartIndex [
 ]
 
 { #category : 'user-interface' }
+SpRubFindReplaceService >> widget [
+	^ widget ifNil: [
+		widget := self newWidget ]
+]
+
+{ #category : 'user-interface' }
 SpRubFindReplaceService >> whenDialogDeleted [
 ]
 
 { #category : 'events handling' }
 SpRubFindReplaceService >> whenFindReplaceWindowRequired: anAnnouncement [
-
 	self textArea hasSelection
 		ifTrue: [ self findText: self textArea selection ].
-
-	self openDialog
+	self widget show
 ]
 
 { #category : 'events handling' }
@@ -195,6 +182,9 @@ SpRubFindReplaceService >> whenTextAreaGotFocus: anAnnounce [
 
 { #category : 'events handling' }
 SpRubFindReplaceService >> whenTextAreaLostFocus: anAnnounce [
+	widget ifNil: [ ^ self ].
+	widget visible ifFalse: [ ^ self ].
+	self textArea whenFindTextChanged: RubFindTextChanged new
 ]
 
 { #category : 'events handling' }

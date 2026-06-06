@@ -147,6 +147,10 @@ RubFindReplaceService >> textArea [
 
 { #category : 'accessing' }
 RubFindReplaceService >> textArea: aTextArea [
+	| oldTextArea |
+	oldTextArea := textAreaHolder at: 1 ifAbsent: nil.
+	oldTextArea == aTextArea ifTrue: [ ^ self ].
+	oldTextArea ifNotNil: [ oldTextArea announcer unsubscribe: self ].
 	textAreaHolder at: 1 put: aTextArea.
 	aTextArea announcer
 		when: RubFindReplaceWindowRequired send: #whenFindReplaceWindowRequired: to: self
