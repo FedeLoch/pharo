@@ -31,6 +31,7 @@ Class {
 		'textArea',
 		'allMatches',
 		'currentMatchIndex',
+		'isReplaceVisible',
 		'isSearching',
 		'isPreserveCase'
 	],
