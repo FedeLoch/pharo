@@ -144,6 +144,11 @@ RubFindReplaceWidget >> clearRegexError [
 	findInput borderColor: self inputBorderColor
 ]
 
+{ #category : 'highlights' }
+RubFindReplaceWidget >> showRegexError: anError [
+	findInput borderColor: self inputNoResultBorderColor
+]
+
 { #category : 'actions' }
 RubFindReplaceWidget >> closeWidget [
 	self hide.
@@ -171,18 +176,18 @@ RubFindReplaceWidget >> createButton: label action: selector [
 { #category : 'button helpers' }
 RubFindReplaceWidget >> createToggle: label getState: getSel action: actSel [
 	| btn |
-	btn := PluggableButtonMorph
-		on: self
-		getState: getSel
-		action: actSel
-		label: label.
-	btn
+	btn := PluggableButtonMorph new
+		model: self;
+		getStateSelector: getSel;
+		action: actSel;
+		label: label;
 		color: Color transparent;
 		hResizing: #rigid;
 		vResizing: #rigid;
 		extent: self buttonExtent;
 		cornerStyle: #rounded;
-		borderWidth: 0.
+		borderWidth: 0;
+		yourself.
 	btn labelMorph color: self textColor.
 	^ btn
 ]
