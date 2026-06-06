@@ -182,9 +182,8 @@ RubFindReplaceService >> whenFindReplaceWindowRequired: anAnnouncement [
 		ifEmpty: [
 			self textArea hasSelection
 				ifTrue: [ self findText: self textArea selection ] ].
-	self dialog
-		openInWorld;
-		position: self positionForSearchBar.
+	self dialog openInWorld.
+	self dialog position: self positionForSearchBar.
 	self dialog findField takeKeyboardFocus
 ]
 

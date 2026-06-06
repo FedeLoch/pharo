@@ -57,8 +57,9 @@ RubFindReplaceSearchBar >> initialize [
 		hResizing: #rigid;
 		vResizing: #shrinkWrap;
 		borderWidth: 1;
-		borderColor: (Color gray: 0.75);
-		color: (Color r: 0.965 g: 0.965 b: 0.965);
+		borderColor: self theme borderColor;
+		color: self theme backgroundColor;
+		cornerStyle: #rounded;
 		extent: 380 @ 26.
 	self initializeFindRow.
 	self initializeReplaceRow.
@@ -101,9 +102,9 @@ RubFindReplaceSearchBar >> newFindField [
 		hResizing: #spaceFill;
 		vResizing: #rigid;
 		height: 20;
-		color: (Color r: 0.98 g: 0.98 b: 0.98);
+		color: self theme backgroundColor;
 		borderWidth: 1;
-		borderColor: (Color gray: 0.8);
+		borderColor: self theme borderColor;
 		changedAction: [ :t | self onFindTextChanged ].
 	findField textArea announcer
 		when: RubKeystroke send: #onFindFieldKeystroke: to: self.
@@ -115,7 +116,7 @@ RubFindReplaceSearchBar >> newMatchCountLabel [
 	^ matchCountLabel := StringMorph new
 		contents: '';
 		font: (StandardFonts defaultFont pointSize: 9);
-		color: (Color gray: 0.5);
+		color: self theme textColor;
 		vResizing: #rigid;
 		hResizing: #shrinkWrap;
 		yourself
@@ -186,9 +187,9 @@ RubFindReplaceSearchBar >> newReplaceField [
 		hResizing: #spaceFill;
 		vResizing: #rigid;
 		height: 20;
-		color: (Color r: 0.98 g: 0.98 b: 0.98);
+		color: self theme backgroundColor;
 		borderWidth: 1;
-		borderColor: (Color gray: 0.8);
+		borderColor: self theme borderColor;
 		changedAction: [ :t | service replaceText: t ].
 	^ replaceField
 ]
@@ -233,7 +234,7 @@ RubFindReplaceSearchBar >> createCompactButtonLabeled: aString getState: getSel 
 		color: Color transparent;
 		borderWidth: 0.
 	btn setProperty: #normalColor toValue: Color transparent.
-	btn setProperty: #activeColor toValue: (Color gray: 0.88).
+	btn setProperty: #activeColor toValue: self theme selectionColor.
 	^ btn
 ]
 
@@ -247,9 +248,9 @@ RubFindReplaceSearchBar >> createActionButtonLabeled: aString action: actSel [
 		hResizing: #rigid;
 		vResizing: #rigid;
 		extent: (aString size * 7 + 10) @ 20;
-		color: (Color r: 0.95 g: 0.95 b: 0.95);
+		color: self theme backgroundColor;
 		borderWidth: 1;
-		borderColor: (Color gray: 0.75).
+		borderColor: self theme borderColor.
 	^ btn
 ]
 
@@ -403,4 +404,25 @@ RubFindReplaceSearchBar >> isEntireWords [
 { #category : 'focus' }
 RubFindReplaceSearchBar >> findField [
 	^ findField
+]
+
+{ #category : 'updating' }
+RubFindReplaceSearchBar >> themeChanged [
+	super themeChanged.
+	self borderColor: self theme borderColor.
+	self color: self theme backgroundColor.
+	findField ifNotNil: [
+		findField color: self theme backgroundColor.
+		findField borderColor: self theme borderColor ].
+	replaceField ifNotNil: [
+		replaceField color: self theme backgroundColor.
+		replaceField borderColor: self theme borderColor ].
+	matchCountLabel ifNotNil: [
+		matchCountLabel color: self theme textColor ].
+	replaceButton ifNotNil: [
+		replaceButton color: self theme backgroundColor.
+		replaceButton borderColor: self theme borderColor ].
+	replaceAllButton ifNotNil: [
+		replaceAllButton color: self theme backgroundColor.
+		replaceAllButton borderColor: self theme borderColor ]
 ]
