@@ -9,42 +9,6 @@ Class {
 	#package : 'Morphic-Widgets-Taskbar-Tests'
 }
 
-{ #category : 'builders' }
-TaskMorphTest >> newTaskWithLabel: aString [
-	"Create a new TaskbarTask with the given label and a fresh Morph."
-
-	^ TaskbarTask
-		morph: Morph new
-		state: #aNilState
-		icon: nil
-		label: aString
-]
-
-{ #category : 'builders' }
-TaskMorphTest >> newTasks: anInteger [
-	"Create anInteger new TaskbarTasks with sequential labels."
-
-	^ self newTasks: anInteger labelled: 'Task'
-]
-
-{ #category : 'builders' }
-TaskMorphTest >> newTasks: anInteger labelled: aString [
-	"Create anInteger new TaskbarTasks with labels of the form '<aString> <i>'."
-
-	^ (1 to: anInteger) collect: [ :i | self newTaskWithLabel: aString, ' ', i printString ]
-]
-
-{ #category : 'builders' }
-TaskMorphTest >> taskListWithTasks: aCollection [
-	"Create a fresh TaskListMorph with the given tasks and no submorphs yet."
-
-	| taskList |
-	taskList := TaskListMorph new.
-	taskList removeAllMorphs.
-	taskList tasks: aCollection asOrderedCollection.
-	^ taskList
-]
-
 { #category : 'mocking taskbar' }
 TaskMorphTest >> newTaskFor: window [
 
@@ -55,13 +19,37 @@ TaskMorphTest >> newTaskFor: window [
 		  label: 'a Label'
 ]
 
+{ #category : 'builders' }
+TaskMorphTest >> newTaskWithLabel: label [
+
+	^ TaskbarTask
+		morph: Morph new
+		state: #aNilState
+		icon: nil
+		label: label
+]
+
+{ #category : 'builders' }
+TaskMorphTest >> newTasks: numberOfTasks [
+
+	^ self newTasks: numberOfTasks labelled: 'Task'
+]
+
+{ #category : 'builders' }
+TaskMorphTest >> newTasks: numberOfTasks labelled: label [
+
+	^ (1 to: numberOfTasks) collect: [ :i | self newTaskWithLabel: label, ' ', i printString ]
+]
+
 { #category : 'mocking taskbar' }
 TaskMorphTest >> registerTaskFor: window [
 
 	| task |
+
 	task := self newTaskFor: window.
 	windows add: window.
 	tasks add: task.
+
 	^ task
 ]
 
@@ -89,4 +77,15 @@ TaskMorphTest >> task2 [
 TaskMorphTest >> task3 [
 
 	^ tasks third
+]
+
+{ #category : 'builders' }
+TaskMorphTest >> taskListWithTasks: aCollection [
+	"Create a fresh TaskListMorph with the given tasks and no submorphs yet."
+
+	| taskList |
+	taskList := TaskListMorph new.
+	taskList removeAllMorphs.
+	taskList tasks: aCollection asOrderedCollection.
+	^ taskList
 ]

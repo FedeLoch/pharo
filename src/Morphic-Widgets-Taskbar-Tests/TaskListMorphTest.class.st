@@ -19,16 +19,107 @@ TaskListMorphTest >> setUp [
 	taskList := TaskListMorph new tasks: tasks
 ]
 
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testContainerOverhead [
+
+	self assert: taskList containerOverhead equals: 16
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testContainerPadding [
+
+	self assert: taskList containerPadding equals: 100
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testEffectivePreviewExtentRespectsFloor [
+
+	| aTaskList extent minX |
+
+	aTaskList := self taskListWithTasks: (self newTasks: 200).
+	extent := aTaskList effectivePreviewExtent.
+	minX := (aTaskList defaultPreviewExtent x * 0.2) asInteger.
+
+	self assert: extent x >= minX
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testEffectivePreviewExtentReturnsDefaultForFewTasks [
+
+	| aTaskList |
+	
+	aTaskList := self taskListWithTasks: (self newTasks: 3).
+	self assert: aTaskList effectivePreviewExtent equals: aTaskList defaultPreviewExtent
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testEffectivePreviewExtentScalesForManyTasks [
+
+	| aTaskList |
+
+	aTaskList := self taskListWithTasks: (self newTasks: 30).
+
+	self assert: (aTaskList effectivePreviewExtent) x < aTaskList defaultPreviewExtent x
+]
+
 { #category : 'tests' }
 TaskListMorphTest >> testHasAllWindows [
 
 	| newTask |
+
 	self assert: (taskList hasCurrentWindows: tasks).
 
 	newTask := self newTaskFor: SystemWindow new.
 	self deny: (taskList hasCurrentWindows: tasks , { newTask }).
 
 	self deny: (taskList hasCurrentWindows: tasks allButLast)
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testLabelFontSizeIsScaled [
+
+	| aTaskList container labelFont |
+
+	aTaskList := self taskListWithTasks: (self newTasks: 30).
+	aTaskList updateButtonsAndPreview.
+	container := aTaskList submorphs first.
+	labelFont := (container submorphs second) font.
+
+	self assert: labelFont pointSize < 11.
+	self assert: labelFont pointSize >= 8
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testLabelShowsFullTextWhenShorterThanLimit [
+
+	| aTaskList task label |
+	
+	aTaskList := self taskListWithTasks: (self newTasks: 1).
+	task := self newTaskWithLabel: 'Short'.
+	
+	label := aTaskList label: task truncation: 10 size: 9.
+	self assert: label contents equals: 'Short'
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testLabelTruncatesWhenLongerThanLimit [
+
+	| aTaskList task label |
+	
+	aTaskList := self taskListWithTasks: (self newTasks: 1).
+	task := self newTaskWithLabel: 'A very long task name to truncate'.
+	
+	label := aTaskList label: task truncation: 8 size: 9.
+	self assert: label contents size <= 8
+]
+
+{ #category : 'tests - max width' }
+TaskListMorphTest >> testMaxWidthReturnsPositiveValue [
+
+	| aTaskList |
+	aTaskList := self taskListWithTasks: (self newTasks: 5).
+	
+	self assert: aTaskList maxWidth > 0
 ]
 
 { #category : 'tests' }
@@ -68,100 +159,25 @@ TaskListMorphTest >> testSelectPreviousTask [
 ]
 
 { #category : 'tests - max width' }
-TaskListMorphTest >> testContainerOverhead [
+TaskListMorphTest >> testUpdateButtonsAndPreviewSetsRigidResizing [
 
-	self assert: taskList containerOverhead equals: 16
-]
+	| aTaskList |
 
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testContainerPadding [
+	aTaskList := self taskListWithTasks: (self newTasks: 5).
+	self assert: aTaskList hResizing equals: #shrinkWrap.
 
-	self assert: taskList containerPadding equals: 100
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testEffectivePreviewExtentReturnsDefaultForFewTasks [
-
-	| tl |
-	tl := self taskListWithTasks: (self newTasks: 3).
-	self assert: tl effectivePreviewExtent equals: tl defaultPreviewExtent
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testEffectivePreviewExtentScalesForManyTasks [
-
-	| tl extent |
-	tl := self taskListWithTasks: (self newTasks: 30).
-	extent := tl effectivePreviewExtent.
-	self assert: extent x < tl defaultPreviewExtent x
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testEffectivePreviewExtentRespectsFloor [
-
-	| tl extent minX |
-	tl := self taskListWithTasks: (self newTasks: 200).
-	extent := tl effectivePreviewExtent.
-	minX := (tl defaultPreviewExtent x * 0.2) asInteger.
-	self assert: extent x >= minX
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testMaxWidthReturnsPositiveValue [
-
-	| tl |
-	tl := self taskListWithTasks: (self newTasks: 5).
-	self assert: tl maxWidth > 0
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testLabelTruncatesWhenLongerThanLimit [
-
-	| tl task label |
-	tl := self taskListWithTasks: (self newTasks: 1).
-	task := self newTaskWithLabel: 'A very long task name to truncate'.
-	label := tl label: task truncation: 8 size: 9.
-	self assert: label contents size <= 8
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testLabelShowsFullTextWhenShorterThanLimit [
-
-	| tl task label |
-	tl := self taskListWithTasks: (self newTasks: 1).
-	task := self newTaskWithLabel: 'Short'.
-	label := tl label: task truncation: 10 size: 9.
-	self assert: label contents equals: 'Short'
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testLabelFontSizeIsScaled [
-
-	| tl container label |
-	tl := self taskListWithTasks: (self newTasks: 30).
-	tl updateButtonsAndPreview.
-	container := tl submorphs first.
-	label := container submorphs second.
-	self assert: label fontSize < 11.
-	self assert: label fontSize >= 8
+	aTaskList updateButtonsAndPreview.
+	self assert: aTaskList hResizing equals: #rigid.
+	self assert: aTaskList vResizing equals: #rigid
 ]
 
 { #category : 'tests - max width' }
 TaskListMorphTest >> testUpdateTaskButtonsCreatesCorrectNumberOfSubmorphs [
 
-	| tl |
-	tl := self taskListWithTasks: (self newTasks: 7).
-	tl updateButtonsAndPreview.
-	self assert: tl submorphs size equals: 7
-]
-
-{ #category : 'tests - max width' }
-TaskListMorphTest >> testUpdateButtonsAndPreviewSetsRigidResizing [
-
-	| tl |
-	tl := self taskListWithTasks: (self newTasks: 5).
-	self assert: tl hResizing equals: #shrinkWrap.
-	tl updateButtonsAndPreview.
-	self assert: tl hResizing equals: #rigid.
-	self assert: tl vResizing equals: #rigid
+	| aTaskList |
+	
+	aTaskList := self taskListWithTasks: (self newTasks: 7).
+	aTaskList updateButtonsAndPreview.
+	
+	self assert: aTaskList submorphs size equals: 7
 ]
