@@ -300,7 +300,7 @@ RubFindReplaceWidget >> inputNoResultBorderColor [
 
 { #category : 'testing' }
 RubFindReplaceWidget >> isCaseSensitive [
-	^ service caseSensitive
+	^ service ifNotNil: [ service caseSensitive ] ifNil: [ false ]
 ]
 
 { #category : 'testing' }
@@ -310,12 +310,12 @@ RubFindReplaceWidget >> isPreserveCase [
 
 { #category : 'testing' }
 RubFindReplaceWidget >> isRegex [
-	^ service isRegex
+	^ service ifNotNil: [ service isRegex ] ifNil: [ false ]
 ]
 
 { #category : 'testing' }
 RubFindReplaceWidget >> isWholeWord [
-	^ service entireWordsOnly
+	^ service ifNotNil: [ service entireWordsOnly ] ifNil: [ false ]
 ]
 
 { #category : 'layout' }
