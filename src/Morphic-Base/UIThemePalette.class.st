@@ -74,6 +74,12 @@ UIThemePalette >> baseSelectionColor [
 ]
 
 { #category : 'colors' }
+UIThemePalette >> baseBorderColor [
+
+	^ paletteDictionary at: #baseBorderColor ifAbsentPut: [ colorConfigurator baseBorderColor ]
+]
+
+{ #category : 'colors' }
 UIThemePalette >> borderColor [
 
 	^ paletteDictionary at: #borderColor ifAbsentPut: [ colorConfigurator borderColor ]

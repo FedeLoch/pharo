@@ -303,6 +303,12 @@ UITheme >> basicCreateArrowOfDirection: aSymbolDirection size: finalSizeInteger 
 ]
 
 { #category : 'accessing - colors' }
+UITheme >> baseBorderColor [
+
+	^ colorPalette baseBorderColor
+]
+
+{ #category : 'accessing - colors' }
 UITheme >> borderColor [
 
 	^ colorPalette borderColor

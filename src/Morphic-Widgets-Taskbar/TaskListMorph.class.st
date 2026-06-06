@@ -60,7 +60,7 @@ TaskListMorph >> addMorphs [
 { #category : 'private' }
 TaskListMorph >> baseBorderColor [
 
-	^ Color veryLightGray
+	^ self theme baseBorderColor
 ]
 
 { #category : 'private' }

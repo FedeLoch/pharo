@@ -592,6 +592,12 @@ UIThemeColorConfigurator >> themeSettings: anObject [
 	themeSettings := anObject
 ]
 
+{ #category : 'custom' }
+UIThemeColorConfigurator >> baseBorderColor [
+
+	^ Color veryLightGray
+]
+
 { #category : 'basic-colors' }
 UIThemeColorConfigurator >> treeLineColorsFrom: aColor [
 
