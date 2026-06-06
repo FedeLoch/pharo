@@ -1,12 +1,12 @@
 "
-RubFindReplaceService default newDialog openInWorld
-RubFindReplaceService 
+I am a find/replace service that creates a RubFindReplaceWidget (inline find bar)
+instead of the old dialog-based RubFindReplaceDialogWindow.
 "
 Class {
 	#name : 'RubFindReplaceService',
 	#superclass : 'FindReplaceService',
 	#instVars : [
-		'dialog',
+		'widget',
 		'textAreaHolder'
 	],
 	#category : 'Rubric-Editing-FindReplaceService',
@@ -21,16 +21,13 @@ RubFindReplaceService >> caseSensitive [
 
 { #category : 'user-interface' }
 RubFindReplaceService >> dialog [
-	^ dialog ifNil: [
-		dialog := self newDialog ]
+	^ self widget
 ]
 
 { #category : 'user-interface' }
 RubFindReplaceService >> dialogIsActiveFor: aTextArea [
-
-	dialog ifNil: [ ^ false ].
-
-	^ (self textArea = aTextArea) and: [ self dialog world isNotNil ]
+	widget ifNil: [ ^ false ].
+	^ (self textArea = aTextArea) and: [ widget visible ] 
 ]
 
 { #category : 'services' }
@@ -69,7 +66,7 @@ RubFindReplaceService >> findAndSelectRegex [
 
 { #category : 'services' }
 RubFindReplaceService >> findNext [
-	| where  |
+	| where |
 	findStartIndex
 		ifNil: [findStartIndex := self textArea editor startIndex].
 	findStartIndex > 0
@@ -81,8 +78,7 @@ RubFindReplaceService >> findNext [
 
 { #category : 'updating' }
 RubFindReplaceService >> findPolicyChanged [
-
-	self textArea whenFindTextChanged: RubFindTextChanged new
+	self textArea ifNotNil: [ :ta | ta whenFindTextChanged: RubFindTextChanged new ]
 ]
 
 { #category : 'accessing' }
@@ -101,17 +97,16 @@ RubFindReplaceService >> findTextSilently: aStringOrText [
 { #category : 'initialization' }
 RubFindReplaceService >> initialize [
 	super initialize.
-
 	textAreaHolder := WeakArray new: 1
 ]
 
 { #category : 'user-interface' }
-RubFindReplaceService >> newDialog [
-	| d |
-	d := RubFindReplaceDialogWindow new model: self.
-	d findPolicyChanged.
-	d announcer when: MorphDeleted send: #whenDialogDeleted to: self.
-	^ d
+RubFindReplaceService >> newWidget [
+	| w |
+	w := RubFindReplaceWidget new.
+	w service: self.
+	w textArea: self textArea.
+	^ w
 ]
 
 { #category : 'services' }
@@ -170,8 +165,9 @@ RubFindReplaceService >> updateFindStartIndex [
 ]
 
 { #category : 'user-interface' }
-RubFindReplaceService >> whenDialogDeleted [
-	dialog := nil
+RubFindReplaceService >> widget [
+	^ widget ifNil: [
+		widget := self newWidget ]
 ]
 
 { #category : 'events handling' }
@@ -180,7 +176,7 @@ RubFindReplaceService >> whenFindReplaceWindowRequired: anAnnouncement [
 		ifEmpty: [
 			self textArea hasSelection
 				ifTrue: [ self findText: self textArea selection ] ].
-	self dialog open
+	self widget show
 ]
 
 { #category : 'events handling' }
@@ -194,7 +190,8 @@ RubFindReplaceService >> whenTextAreaGotFocus: anAnnounce [
 
 { #category : 'events handling' }
 RubFindReplaceService >> whenTextAreaLostFocus: anAnnounce [
-	self dialog isInWorld ifFalse: [ ^self ].
+	widget ifNil: [ ^ self ].
+	widget visible ifFalse: [ ^ self ].
 	self textArea whenFindTextChanged: RubFindTextChanged new
 ]
 
