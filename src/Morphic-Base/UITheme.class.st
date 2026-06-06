@@ -234,6 +234,12 @@ UITheme >> balloonTextColor [
 ]
 
 { #category : 'accessing - colors' }
+UITheme >> baseBorderColor [
+
+	^ colorPalette baseBorderColor
+]
+
+{ #category : 'accessing - colors' }
 UITheme >> baseColor [
 
 	^ colorPalette baseColor
@@ -300,12 +306,6 @@ UITheme >> basicCreateArrowOfDirection: aSymbolDirection size: finalSizeInteger 
 		magnifyBy: 1 / resizeFactor
 		smoothing: 4.
 	^resizedForm trimBordersOfColor: Color transparent
-]
-
-{ #category : 'accessing - colors' }
-UITheme >> baseBorderColor [
-
-	^ colorPalette baseBorderColor
 ]
 
 { #category : 'accessing - colors' }
@@ -4453,10 +4453,17 @@ UITheme >> taskbarMinimizedButtonColorFor: aButton [
 ]
 
 { #category : 'border-styles' }
+UITheme >> taskbarThumbnailBorderWidthFor: aMorph [
+	"Answer the corner style for the taskbar thumbnail/tasklist."
+
+	^ 0
+]
+
+{ #category : 'border-styles' }
 UITheme >> taskbarThumbnailCornerStyleFor: aMorph [
 	"Answer the corner style for the taskbar thumbnail/tasklist."
 
-	^#square
+	^ #rounded
 ]
 
 { #category : 'border-styles' }

@@ -44,6 +44,12 @@ UIThemePalette >> balloonTextColor [
 ]
 
 { #category : 'colors' }
+UIThemePalette >> baseBorderColor [
+
+	^ paletteDictionary at: #baseBorderColor ifAbsentPut: [ colorConfigurator baseBorderColor ]
+]
+
+{ #category : 'colors' }
 UIThemePalette >> baseColor [
 
 	^ paletteDictionary at: #baseColor ifAbsentPut: [ colorConfigurator baseColor ]
@@ -71,12 +77,6 @@ UIThemePalette >> baseScrollbarColorFor: aScrollbar [
 UIThemePalette >> baseSelectionColor [
 
 	^ paletteDictionary at: #baseSelectionColor ifAbsentPut: [ colorConfigurator baseSelectionColor ]
-]
-
-{ #category : 'colors' }
-UIThemePalette >> baseBorderColor [
-
-	^ paletteDictionary at: #baseBorderColor ifAbsentPut: [ colorConfigurator baseBorderColor ]
 ]
 
 { #category : 'colors' }

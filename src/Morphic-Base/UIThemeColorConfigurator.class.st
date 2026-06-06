@@ -44,6 +44,12 @@ UIThemeColorConfigurator >> balloonTextColor [
 	^ self textColor
 ]
 
+{ #category : 'custom' }
+UIThemeColorConfigurator >> baseBorderColor [
+
+	^ Color veryLightGray
+]
+
 { #category : 'colors' }
 UIThemeColorConfigurator >> baseColor [
 
@@ -590,12 +596,6 @@ UIThemeColorConfigurator >> themeSettings [
 UIThemeColorConfigurator >> themeSettings: anObject [
 
 	themeSettings := anObject
-]
-
-{ #category : 'custom' }
-UIThemeColorConfigurator >> baseBorderColor [
-
-	^ Color veryLightGray
 ]
 
 { #category : 'basic-colors' }

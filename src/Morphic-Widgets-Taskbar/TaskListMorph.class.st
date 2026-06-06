@@ -168,8 +168,8 @@ TaskListMorph >> initializeAppearance [
 
 	self
 		color: (Color black alpha: 0.7);
-		borderWidth: 0;
-		cornerStyle: #rounded
+		borderWidth: (self theme taskbarThumbnailBorderWidthFor: self);
+		cornerStyle: (self theme taskbarThumbnailCornerStyleFor: self)
 ]
 
 { #category : 'initialization' }
