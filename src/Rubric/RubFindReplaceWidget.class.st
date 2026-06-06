@@ -60,7 +60,6 @@ RubFindReplaceWidget >> buildFindRow [
 	chevronBtn := self createButton: '›' action: #toggleReplaceVisible.
 	chevronBtn helpText: 'Toggle Replace (Cmd+H)'.
 	findInput := self newInputField.
-	findInput ghostText: 'Search'.
 	findInput announcer when: RubTextChanged send: #whenFindTextChanged to: self.
 	findInput announcer when: RubReturnEntered send: #whenFindReturnEntered to: self.
 	caseBtn := self createToggle: 'Aa' getState: #isCaseSensitive action: #toggleCaseSensitive.
@@ -106,7 +105,6 @@ RubFindReplaceWidget >> buildReplaceRow [
 		yourself.
 	row addMorphBack: spacer.
 	replaceInput := self newInputField.
-	replaceInput ghostText: 'Replace'.
 	replaceInput announcer when: RubTextChanged send: #whenReplaceTextChanged to: self.
 	replaceInput announcer when: RubReturnEntered send: #whenReplaceReturnEntered to: self.
 	preserveBtn := self createToggle: 'AB' getState: #isPreserveCase action: #togglePreserveCase.
@@ -331,7 +329,6 @@ RubFindReplaceWidget >> newInputField [
 	| input |
 	input := RubTextFieldArea new.
 	input
-		autoAccept: true;
 		withoutDecoratorNamed: #findReplaceSelection;
 		backgroundColor: self inputBackgroundColor;
 		color: self textColor;
