@@ -154,35 +154,39 @@ RubFindReplaceWidget >> closeWidget [
 
 { #category : 'button helpers' }
 RubFindReplaceWidget >> createButton: label action: selector [
-	^ PluggableButtonMorph new
+	| btn |
+	btn := PluggableButtonMorph new
 		model: self;
 		action: selector;
 		label: label;
 		color: Color transparent;
-		labelColor: self textColor;
 		hResizing: #rigid;
 		vResizing: #rigid;
 		extent: self buttonExtent;
 		cornerStyle: #rounded;
 		borderWidth: 0;
-		yourself
+		yourself.
+	btn labelMorph color: self textColor.
+	^ btn
 ]
 
 { #category : 'button helpers' }
 RubFindReplaceWidget >> createToggle: label getState: getSel action: actSel [
-	^ PluggableButtonMorph new
+	| btn |
+	btn := PluggableButtonMorph new
 		model: self;
 		getState: getSel;
 		action: actSel;
 		label: label;
 		color: Color transparent;
-		labelColor: self textColor;
 		hResizing: #rigid;
 		vResizing: #rigid;
 		extent: self buttonExtent;
 		cornerStyle: #rounded;
 		borderWidth: 0;
-		yourself
+		yourself.
+	btn labelMorph color: self textColor.
+	^ btn
 ]
 
 { #category : 'searching' }
@@ -489,13 +493,13 @@ RubFindReplaceWidget >> toggleCaseSensitive [
 { #category : 'button helpers' }
 RubFindReplaceWidget >> toggleOff: btn [
 	btn color: Color transparent.
-	btn labelColor: self textColor
+	btn labelMorph color: self textColor
 ]
 
 { #category : 'button helpers' }
 RubFindReplaceWidget >> toggleOn: btn [
 	btn color: (Color r: 0 g: 122 b: 204 range: 255).
-	btn labelColor: Color white
+	btn labelMorph color: Color white
 ]
 
 { #category : 'actions' }
