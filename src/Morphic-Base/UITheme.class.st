@@ -4060,6 +4060,12 @@ UITheme >> selectedItemListTextColor [
 ]
 
 { #category : 'accessing - colors' }
+UITheme >> selectedTabBorderColor [
+
+	^ colorPalette selectedTabBorderColor
+]
+
+{ #category : 'accessing - colors' }
 UITheme >> selectionBarColor [
 
 	^ colorPalette selectionBarColor

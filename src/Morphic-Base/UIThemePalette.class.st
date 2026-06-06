@@ -460,6 +460,12 @@ UIThemePalette >> selectedItemListTextColor [
 ]
 
 { #category : 'colors' }
+UIThemePalette >> selectedTabBorderColor [
+
+	^ paletteDictionary at: #selectedTabBorderColor ifAbsentPut: [ colorConfigurator selectedTabBorderColor ]
+]
+
+{ #category : 'colors' }
 UIThemePalette >> selectionBarColor [
 
 	^ paletteDictionary at: #selectionBarColor ifAbsentPut: [ colorConfigurator selectionBarColor ]

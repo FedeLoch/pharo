@@ -474,6 +474,12 @@ UIThemeColorConfigurator >> selectedItemListTextColor [
 	^ self textColor
 ]
 
+{ #category : 'custom' }
+UIThemeColorConfigurator >> selectedTabBorderColor [
+
+	^ Color R: 55 G: 140 B: 240
+]
+
 { #category : 'colors' }
 UIThemeColorConfigurator >> selectionBarColor [
 
