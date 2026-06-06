@@ -1,7 +1,5 @@
 "
-I am a FindReplace service that allows to use Spec based dialog as a replacement of a native Morphic find & replace dialog. 
-
-I can currently work only with the default Morphic Spec backend.
+I am a FindReplace service that uses a RubFindReplaceSearchBar for finding and replacing text in a text area.
 "
 Class {
 	#name : 'SpRubFindReplaceService',
@@ -28,8 +26,8 @@ SpRubFindReplaceService >> dialog [
 
 { #category : 'services' }
 SpRubFindReplaceService >> dialogIsActiveFor: aTextArea [
-
- ^ false
+    ^ dialog isNotNil
+        and: [ self textArea = aTextArea and: [ dialog world isNotNil ] ]
 ]
 
 { #category : 'accessing' }
@@ -80,6 +78,15 @@ SpRubFindReplaceService >> findAndSelectRegex [
 ]
 
 { #category : 'services' }
+SpRubFindReplaceService >> positionForSearchBar [
+	| ta worldBounds |
+	ta := self textArea.
+	ta ifNil: [ ^ 0 @ 0 ].
+	worldBounds := ta boundsInWorld.
+	^ (worldBounds topRight x - 360) @ (worldBounds topRight y)
+]
+
+{ #category : 'services' }
 SpRubFindReplaceService >> findNext [
 
 	^ nil
@@ -106,14 +113,13 @@ SpRubFindReplaceService >> initialize [
 
 { #category : 'events handling' }
 SpRubFindReplaceService >> openDialog [
-
-	| text |
-	text := findText asString.
-	dialog := SpRubFindReplaceDialog on: self.
-	dialog updateFromModel.
-	(text isNotEmpty and: [ text ~= dialog findInput text ]) ifTrue: [
-		dialog findInput text: text ].
-	dialogWindow := dialog openDialog 
+	| bar |
+	bar := RubFindReplaceSearchBar new.
+	bar service: self.
+	dialog := bar.
+	bar openInWorld.
+	bar position: self positionForSearchBar.
+	bar findField takeKeyboardFocus
 ]
 
 { #category : 'services' }
@@ -177,14 +183,17 @@ SpRubFindReplaceService >> updateFindStartIndex [
 
 { #category : 'user-interface' }
 SpRubFindReplaceService >> whenDialogDeleted [
+	dialog := nil
 ]
 
 { #category : 'events handling' }
 SpRubFindReplaceService >> whenFindReplaceWindowRequired: anAnnouncement [
-
+	(self dialogIsActiveFor: self textArea)
+		ifTrue: [
+			dialog findField takeKeyboardFocus.
+			^ self ].
 	self textArea hasSelection
 		ifTrue: [ self findText: self textArea selection ].
-
 	self openDialog
 ]
 
