@@ -171,18 +171,18 @@ RubFindReplaceWidget >> createButton: label action: selector [
 { #category : 'button helpers' }
 RubFindReplaceWidget >> createToggle: label getState: getSel action: actSel [
 	| btn |
-	btn := PluggableButtonMorph new
-		model: self;
-		getState: getSel;
-		action: actSel;
-		label: label;
+	btn := PluggableButtonMorph
+		on: self
+		getState: getSel
+		action: actSel
+		label: label.
+	btn
 		color: Color transparent;
 		hResizing: #rigid;
 		vResizing: #rigid;
 		extent: self buttonExtent;
 		cornerStyle: #rounded;
-		borderWidth: 0;
-		yourself.
+		borderWidth: 0.
 	btn labelMorph color: self textColor.
 	^ btn
 ]
