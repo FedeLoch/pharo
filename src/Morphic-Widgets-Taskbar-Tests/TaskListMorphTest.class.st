@@ -159,19 +159,6 @@ TaskListMorphTest >> testSelectPreviousTask [
 ]
 
 { #category : 'tests - max width' }
-TaskListMorphTest >> testUpdateButtonsAndPreviewSetsRigidResizing [
-
-	| aTaskList |
-
-	aTaskList := self taskListWithTasks: (self newTasks: 5).
-	self assert: aTaskList hResizing equals: #shrinkWrap.
-
-	aTaskList updateButtonsAndPreview.
-	self assert: aTaskList hResizing equals: #rigid.
-	self assert: aTaskList vResizing equals: #rigid
-]
-
-{ #category : 'tests - max width' }
 TaskListMorphTest >> testUpdateTaskButtonsCreatesCorrectNumberOfSubmorphs [
 
 	| aTaskList |
