@@ -97,17 +97,16 @@ RubFindReplaceSearchBar >> initializeReplaceRow [
 
 { #category : 'submorphs - find row' }
 RubFindReplaceSearchBar >> newFindField [
-	| field |
-	field := RubPluggableTextFieldMorph new.
-	field
+	findField := RubPluggableTextFieldMorph new.
+	findField
 		ghostText: 'Find';
 		acceptOnCR: false;
 		hResizing: #spaceFill;
 		vResizing: #rigid;
 		changedAction: [ :t | self onFindTextChanged ].
-	field textArea announcer
+	findField textArea announcer
 		when: RubKeystroke send: #onFindFieldKeystroke: to: self.
-	^ field
+	^ findField
 ]
 
 { #category : 'submorphs - find row' }
@@ -179,15 +178,14 @@ RubFindReplaceSearchBar >> newCloseButton [
 
 { #category : 'submorphs - replace row' }
 RubFindReplaceSearchBar >> newReplaceField [
-	| field |
-	field := RubPluggableTextFieldMorph new.
-	field
+	replaceField := RubPluggableTextFieldMorph new.
+	replaceField
 		ghostText: 'Replace';
 		acceptOnCR: false;
 		hResizing: #spaceFill;
 		vResizing: #rigid;
 		changedAction: [ :t | service replaceText: t ].
-	^ field
+	^ replaceField
 ]
 
 { #category : 'submorphs - replace row' }
