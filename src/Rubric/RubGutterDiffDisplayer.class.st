@@ -102,25 +102,40 @@ RubGutterDiffDisplayer >> computeLineStates [
 		(baselineLines at: i) ~= (currentLines at: i) ifTrue: [
 			(matchedY at: i) = 0
 				ifTrue: [
-					"Current line is unmatched by LCS"
 					(matchedX at: i) = 0
 						ifTrue: [ lineStates at: i put: #modified ]
 						ifFalse: [ lineStates at: i put: #added ] ]
 				ifFalse: [
-					"Current line matched elsewhere (shifted in). Old content gone."
-					(matchedX at: i) = 0 ifTrue: [ removedPositions add: i ] ] ] ].
+					(matchedX at: i) = 0
+						ifTrue: [ self addRemovedGapForBaselineIndex: i matchedX: matchedX ]
+						ifFalse: [ lineStates at: i put: #modified ] ] ] ].
 
-	"Phase 4: Extra current lines → #added (only if unmatched by LCS)"
+	"Phase 3: Extra current lines → #added (only if unmatched by LCS)"
 	common + 1 to: currentLines size do: [ :i |
 		(matchedY at: i) = 0 ifTrue: [ lineStates at: i put: #added ] ].
 
-	"Phase 5: Extra baseline lines → #removed (only if unmatched by LCS)"
+	"Phase 4: Extra baseline lines → removal gap after last current line"
 	common + 1 to: baselineLines size do: [ :i |
-		(matchedX at: i) = 0 ifTrue: [ removedPositions add: i ] ].
+		(matchedX at: i) = 0 ifTrue: [ removedPositions add: currentLines size + 1 ] ].
 
-	"Phase 6: Collapse consecutive removed positions — only keep the first of each run"
-	removedPositions := removedPositions reject: [ :pos |
-		removedPositions includes: pos - 1 ]
+	"Phase 5: Collapse consecutive removal gaps — only keep the first of each run"
+	removedPositions := removedPositions asSet asOrderedCollection
+		reject: [ :pos | removedPositions includes: pos - 1 ];
+		yourself
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> addRemovedGapForBaselineIndex: pos matchedX: matchedX [
+	"Map a deleted baseline line at position pos to a gap position in the current text.
+	Gap positions are 1-indexed: 1 = before first line, n+1 = after last current line.
+	The gap is placed right after the nearest preceding baseline line that has a match."
+	| gapPos |
+	gapPos := 1.
+	(pos - 1) to: 1 by: -1 do: [ :p |
+		(matchedX at: p) ~= 0 ifTrue: [
+			gapPos := (matchedX at: p) + 1.
+			^ removedPositions add: gapPos ] ].
+	removedPositions add: gapPos
 ]
 
 { #category : 'geometry' }
@@ -143,8 +158,7 @@ RubGutterDiffDisplayer >> drawOn: aCanvas [
 			visibleRectangle := clippedCanvas clipRect.
 			firstLine := self lineIndexForPoint: visibleRectangle topLeft.
 			lastLine := self lineIndexForPoint: visibleRectangle bottomRight.
-			firstLine to: lastLine do: [ :i |
-				i > lineStates size ifTrue: [ ^ self ].
+			firstLine to: (lastLine min: lineStates size min: lines size) do: [ :i |
 				(lineStates at: i) = #unchanged ifFalse: [
 					self drawIndicatorBarOn: clippedCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
 			removedPositions do: [ :pos |
@@ -169,8 +183,7 @@ RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
 			visibleRectangle := aCanvas clipRect.
 			firstLine := self lineIndexForPoint: visibleRectangle topLeft.
 			lastLine := self lineIndexForPoint: visibleRectangle bottomRight.
-			firstLine to: lastLine do: [ :i |
-				i > lineStates size ifTrue: [ ^ self ].
+			firstLine to: (lastLine min: lineStates size min: lines size) do: [ :i |
 				(lineStates at: i) = #unchanged ifFalse: [
 					self drawIndicatorBarOnAthens: aCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
 			removedPositions do: [ :pos |

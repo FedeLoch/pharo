@@ -183,7 +183,7 @@ line3'.
 ]
 
 { #category : 'tests' }
-RubGutterDiffDisplayerTest >> testInsertAndEditNearby [
+RubGutterDiffDisplayerTest >> 	testInsertAndEditNearby [
 	"Editing a line AND inserting a line nearby: lines at different positions show
 	indicators — the algorithm classifies based on LCS matching per position"
 	ruler baseline: 'line1
@@ -198,7 +198,7 @@ line4'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#unchanged #modified #added #unchanged #unchanged) asArray.
+		equals: #(#unchanged #modified #added #modified #unchanged) asArray.
 	self assert: ruler removedPositions isEmpty
 ]
 
@@ -222,8 +222,10 @@ e'.
 ]
 
 { #category : 'tests' }
-RubGutterDiffDisplayerTest >> testNonConsecutiveRemovalsKeepSeparateArrows [
-	"Non-adjacent deletions each keep their own arrow (not collapsed)"
+RubGutterDiffDisplayerTest >> 	testNonConsecutiveRemovalsKeepSeparateArrows [
+	"Non-adjacent deletions each keep their own arrow (not collapsed).
+	Position 3 shows #modified because both current line 3 ('e') and baseline line 3 ('c')
+	have LCS matches to other positions, so the content at that position changed."
 	ruler baseline: 'a
 b
 c
@@ -235,7 +237,7 @@ e'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#unchanged #unchanged #unchanged) asArray.
+		equals: #(#unchanged #unchanged #modified) asArray.
 	self assert: ruler removedPositions asArray equals: #(2 4)
 ]
 
