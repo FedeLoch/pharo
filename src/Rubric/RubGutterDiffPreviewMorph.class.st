@@ -1,7 +1,6 @@
 "
-I show a unified (inline) diff of the clicked line area.
-Added lines have a green background, removed lines a red background,
-matching DiffMorph's theme colors.
+I show a side-by-side DiffMorph preview of the clicked line area.
+No title panel or options panel (chrome removed).
 
 Dismissal: click outside the popup, click in the method editor, or press Escape.
 "

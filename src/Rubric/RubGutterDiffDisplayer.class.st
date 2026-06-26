@@ -385,7 +385,7 @@ RubGutterDiffDisplayer >> showPreviewAtLine: lineIndex [
 		previewMorph delete.
 		previewMorph := nil ].
 	currentText := self textArea text asString.
-	previewWidth := (self textArea width * 0.8) max: 300.
+	previewWidth := self textArea width.
 	preview := RubGutterDiffPreviewMorph
 		forLine: lineIndex
 		baseline: (baseline ifNil: [ currentText ])
