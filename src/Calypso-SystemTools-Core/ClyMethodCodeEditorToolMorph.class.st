@@ -104,6 +104,15 @@ ClyMethodCodeEditorToolMorph >> belongsToRemovedBrowserContext [
 ClyMethodCodeEditorToolMorph >> buildLeftSideBar [
 
 	super buildLeftSideBar.
+	textMorph withGutterDiff.
+	textMorph gutterDiffRuler
+		editingMethod: editingMethod;
+		baselineProvider:
+			(RubGitMethodBaselineProvider new
+				fallbackProvider:
+					(RubEpiceaMethodBaselineProvider new
+						fallbackProvider: RubCompiledMethodBaselineProvider new)).
+	textMorph gutterDiffRuler refreshBaseline.
 
 	CmdTextLeftBarClickActivation enableInMorph: self leftSideBar withCommandsFrom: self.
 	CmdTextLeftBarDoubleClickActivation enableInMorph: self leftSideBar withCommandsFrom: self
@@ -386,6 +395,13 @@ ClyMethodCodeEditorToolMorph >> update [
 	super update.
 
 	self formatTextIfNeeded
+]
+
+{ #category : 'updating' }
+ClyMethodCodeEditorToolMorph >> textUpdated [
+
+	super textUpdated.
+	textMorph gutterDiffRuler ifNotNil: [ :r | r refreshBaseline ]
 ]
 
 { #category : 'updating' }

@@ -1362,8 +1362,18 @@ RubScrolledTextMorph >> withSourceCodeAnnotation [
 ]
 
 { #category : 'accessing - rulers' }
+RubScrolledTextMorph >> withGutterDiff [
+	self withRulerNamed: #gutterDiff
+]
+
+{ #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withTextSegmentIcons [
 	self withRulerNamed: #textSegmentIcons
+]
+
+{ #category : 'accessing - rulers' }
+RubScrolledTextMorph >> gutterDiffRuler [
+	^ self rulerNamed: #gutterDiff
 ]
 
 { #category : 'accessing - rulers' }
@@ -1441,6 +1451,11 @@ RubScrolledTextMorph >> withoutSelectionBar [
 { #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withoutTextField [
 	self withoutRulerNamed: #textField
+]
+
+{ #category : 'accessing - rulers' }
+RubScrolledTextMorph >> withoutGutterDiff [
+	self withoutRulerNamed: #gutterDiff
 ]
 
 { #category : 'accessing - rulers' }
