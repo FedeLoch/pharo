@@ -64,15 +64,15 @@ RubGutterDiffDisplayer >> baselineProvider: aProvider [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> colorForState: aSymbol [
-	aSymbol = #added ifTrue: [ ^ Color green alpha: 0.5 ].
-	aSymbol = #modified ifTrue: [ ^ Color blue alpha: 0.5 ].
-	aSymbol = #removed ifTrue: [ ^ Color red ].
+	aSymbol = #added ifTrue: [ ^ (Color fromHexString: '2da044') alpha: 0.5 ].
+	aSymbol = #modified ifTrue: [ ^ (Color fromHexString: '0078d5') alpha: 0.5 ].
+	aSymbol = #removed ifTrue: [ ^ Color fromHexString: 'f95249' ].
 	^ Color transparent
 ]
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> computeLineStates [
-	| currentText currentLines baselineLines builder yLines xLines xLineStream dstIdx |
+	| currentText currentLines baselineLines builder yLines xLines xLineStream xLine dstIdx |
 	baseline ifNil: [ ^ self ].
 	self textArea ifNil: [ ^ self ].
 	currentText := self textArea text asString.
@@ -182,7 +182,8 @@ RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol at
 
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord on: aCanvas [
-	| arrowSize leftX topY botY off |
+	| color arrowSize leftX topY botY off |
+	color := self colorForState: #removed.
 	arrowSize := self indicatorWidth.
 	leftX := self bounds left + self horizontalGapBefore.
 	off := self offset y negated + self bounds top.
@@ -192,12 +193,13 @@ RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord on: aCanvas [
 		leftX @ topY.
 		(leftX + arrowSize) @ (yCoord + off).
 		leftX @ botY
-	} fillStyle: Color red
+	} fillStyle: color
 ]
 
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord onAthens: aCanvas [
-	| arrowSize leftX topY botY off |
+	| color arrowSize leftX topY botY off |
+	color := self colorForState: #removed.
 	arrowSize := self indicatorWidth.
 	leftX := self bounds left + self horizontalGapBefore.
 	off := self offset y negated + self bounds top.
@@ -209,7 +211,7 @@ RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord onAthens: aCanvas [
 		builder lineTo: (leftX + arrowSize) @ (yCoord + off).
 		builder lineTo: leftX @ botY.
 		builder close ]).
-	aCanvas setPaint: Color red.
+	aCanvas setPaint: color.
 	aCanvas draw
 ]
 
