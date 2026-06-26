@@ -1,21 +1,19 @@
 "
-I display colored indicators in the editor gutter showing which lines have been added,
-modified, or removed relative to a baseline version (typically the last commit).
+I display visual indicators in the editor gutter showing lines that differ from the baseline
+(typically the last committed version). I sit at level 3 (leftmost) in the gutter.
 
-I sit to the left of line numbers (level 3) and respond to mouse clicks to show
-a DiffMorph preview popup (RubGutterDiffPreviewMorph) when a changed line is clicked.
-
-Colors:
-  - green: line was added
-  - orange: line was modified
-  - red: line was removed
+Visual feedback per state:
+  - #added:    green bar spanning the full line height
+  - #modified: blue bar spanning the full line height
+  - #removed:  small red right-pointing arrow (▶) aligned to the line
 
 Instance Variables:
-  baseline        <String> Cached original text to diff against
+  baseline         <String> Cached original text to diff against
   baselineProvider <RubMethodBaselineProvider> Pluggable provider for the baseline
-  lineStates      <Array of Symbol> Per-line state: #unchanged, #added, #modified
-  previewMorph    <RubGutterDiffPreviewMorph> Currently visible diff popup (or nil)
-  editingMethod   <CompiledMethod> The method being edited (for baseline fetching)
+  lineStates       <Array of Symbol> Per-line state: #unchanged, #added, #modified
+  removedPositions <OrderedCollection> 1-indexed positions in current text where a removed-line arrow should appear
+  previewMorph     <RubGutterDiffPreviewMorph> Currently visible diff popup (or nil)
+  editingMethod    <CompiledMethod> The method being edited (for baseline fetching)
 "
 Class {
 	#name : 'RubGutterDiffDisplayer',
@@ -24,6 +22,7 @@ Class {
 		'baseline',
 		'baselineProvider',
 		'lineStates',
+		'removedPositions',
 		'previewMorph',
 		'editingMethod'
 	],
@@ -35,6 +34,12 @@ Class {
 { #category : 'querying' }
 RubGutterDiffDisplayer class >> key [
 	^ #gutterDiff
+]
+
+{ #category : 'initialization' }
+RubGutterDiffDisplayer >> initialize [
+	super initialize.
+	removedPositions := OrderedCollection new
 ]
 
 { #category : 'accessing' }
@@ -59,29 +64,32 @@ RubGutterDiffDisplayer >> baselineProvider: aProvider [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> colorForState: aSymbol [
-	aSymbol = #added ifTrue: [ ^ Color green muchDarker alpha: 0.35 ].
-	aSymbol = #modified ifTrue: [ ^ Color orange muchDarker alpha: 0.35 ].
-	aSymbol = #removed ifTrue: [ ^ Color red muchDarker alpha: 0.35 ].
+	aSymbol = #added ifTrue: [ ^ Color green alpha: 0.5 ].
+	aSymbol = #modified ifTrue: [ ^ Color blue alpha: 0.5 ].
+	aSymbol = #removed ifTrue: [ ^ Color red ].
 	^ Color transparent
 ]
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> computeLineStates [
-	| currentText builder dstIdx |
+	| currentText currentLines baselineLines common |
 	baseline ifNil: [ ^ self ].
 	self textArea ifNil: [ ^ self ].
 	currentText := self textArea text asString.
-	lineStates := Array new: currentText lines size withAll: #unchanged.
-	builder := TextDiffBuilder from: baseline to: currentText.
-	dstIdx := 1.
-	builder
-		patchSequenceDoIfMatch: [ :yElement |
-			dstIdx := dstIdx + 1 ]
-		ifInsert: [ :yElement |
-			dstIdx <= lineStates size ifTrue: [
-				lineStates at: dstIdx put: #added ].
-			dstIdx := dstIdx + 1 ]
-		ifRemove: [ :xElement | "skip" ]
+	currentLines := currentText lines.
+	baselineLines := baseline lines.
+	lineStates := Array new: currentLines size withAll: #unchanged.
+	removedPositions := OrderedCollection new.
+	common := baselineLines size min: currentLines size.
+	1 to: common do: [ :i |
+		(baselineLines at: i) ~= (currentLines at: i)
+			ifTrue: [ lineStates at: i put: #modified ] ].
+	common + 1 to: currentLines size do: [ :i |
+		lineStates at: i put: #added ].
+	common + 1 to: baselineLines size do: [ :i |
+		| pos |
+		pos := i min: currentLines size.
+		pos > 0 ifTrue: [ removedPositions add: pos ] ]
 ]
 
 { #category : 'geometry' }
@@ -91,73 +99,113 @@ RubGutterDiffDisplayer >> computedWidthFrom: aRectangle [
 
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> drawOn: aCanvas [
-	| right lines visibleRectangle |
+	| lines visibleRectangle firstLine lastLine |
 	super drawOn: aCanvas.
 	self paragraph ifNil: [ ^ self ].
 	self paragraph lines ifNil: [ ^ self ].
 	lineStates ifNil: [ ^ self ].
-	right := self bounds right.
 	lines := self lines.
 	aCanvas
 		clipBy: self bounds
 		during: [ :clippedCanvas |
-			| sepBounds |
-			sepBounds := self verticalSeparatorBounds.
-			sepBounds ifNotNil: [
-				clippedCanvas fillRectangle: sepBounds color: self verticalSeparatorColor ].
+			clippedCanvas fillRectangle: self verticalSeparatorBounds color: self verticalSeparatorColor.
 			visibleRectangle := clippedCanvas clipRect.
-			(self lineIndexForPoint: visibleRectangle topLeft)
-				to: (self lineIndexForPoint: visibleRectangle bottomRight)
-				do: [ :i |
-					| line state indicatorColor indicatorBounds |
-					i > lineStates size ifTrue: [ ^ self ].
-					state := lineStates at: i.
-					state = #unchanged ifFalse: [
-						line := lines at: i.
-						indicatorColor := self colorForState: state.
-						indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
-							corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
-						indicatorBounds := indicatorBounds
-							translateBy: 0 @ (self offset y negated + self bounds top).
-						clippedCanvas fillRectangle: indicatorBounds color: indicatorColor ] ] ]
+			firstLine := self lineIndexForPoint: visibleRectangle topLeft.
+			lastLine := self lineIndexForPoint: visibleRectangle bottomRight.
+			firstLine to: lastLine do: [ :i |
+				i > lineStates size ifTrue: [ ^ self ].
+				(lineStates at: i) = #unchanged ifFalse: [
+					self drawIndicatorBarOn: clippedCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
+			removedPositions do: [ :pos |
+				(pos between: firstLine and: lastLine) ifTrue: [
+					pos <= lines size ifTrue: [
+						self drawRemovedArrowOn: clippedCanvas atLine: (lines at: pos) ] ] ] ]
 ]
 
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
-	| right lines visibleRectangle |
+	| lines visibleRectangle firstLine lastLine |
 	super drawOnAthensCanvas: aCanvas.
 	self paragraph ifNil: [ ^ self ].
 	self paragraph lines ifNil: [ ^ self ].
 	lineStates ifNil: [ ^ self ].
-	right := self bounds right.
 	lines := self lines.
 	aCanvas
 		clipBy: self bounds
 		during: [
-			| sepBounds |
-			sepBounds := self verticalSeparatorBounds.
-			sepBounds ifNotNil: [
-				aCanvas setShape: sepBounds.
-				aCanvas setPaint: self verticalSeparatorColor.
-				aCanvas draw ].
+			aCanvas setShape: self verticalSeparatorBounds.
+			aCanvas setPaint: self verticalSeparatorColor.
+			aCanvas draw.
 			visibleRectangle := aCanvas clipRect.
-			(self lineIndexForPoint: visibleRectangle topLeft)
-				to: (self lineIndexForPoint: visibleRectangle bottomRight)
-				do: [ :i |
-					| line state indicatorColor indicatorBounds |
-					i > lineStates size ifTrue: [ ^ self ].
-					state := lineStates at: i.
-					state = #unchanged ifFalse: [
-						line := lines at: i.
-						indicatorColor := self colorForState: state.
-						indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
-							corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
-						indicatorBounds := indicatorBounds
-							translateBy: 0 @ (self offset y negated + self bounds top).
-						aCanvas setShape: indicatorBounds.
-						aCanvas setPaint: indicatorColor.
-						aCanvas draw ] ]
-			]
+			firstLine := self lineIndexForPoint: visibleRectangle topLeft.
+			lastLine := self lineIndexForPoint: visibleRectangle bottomRight.
+			firstLine to: lastLine do: [ :i |
+				i > lineStates size ifTrue: [ ^ self ].
+				(lineStates at: i) = #unchanged ifFalse: [
+					self drawIndicatorBarOnAthens: aCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
+			removedPositions do: [ :pos |
+				(pos between: firstLine and: lastLine) ifTrue: [
+					pos <= lines size ifTrue: [
+						self drawRemovedArrowOnAthens: aCanvas atLine: (lines at: pos) ] ] ] ]
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawIndicatorBarOn: aCanvas forState: aSymbol atLine: line [
+	| indicatorColor indicatorBounds |
+	indicatorColor := self colorForState: aSymbol.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
+		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas fillRectangle: indicatorBounds color: indicatorColor
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol atLine: line [
+	| indicatorColor indicatorBounds |
+	indicatorColor := self colorForState: aSymbol.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
+		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas setShape: indicatorBounds.
+	aCanvas setPaint: indicatorColor.
+	aCanvas draw
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawRemovedArrowOn: aCanvas atLine: line [
+	| arrowSize leftX lineMidY topY botY off |
+	arrowSize := self indicatorWidth.
+	leftX := self bounds left + self horizontalGapBefore.
+	lineMidY := (line top + line bottom) // 2.
+	topY := lineMidY - (arrowSize // 2).
+	botY := lineMidY + (arrowSize // 2).
+	off := self offset y negated + self bounds top.
+	aCanvas drawPolygon: {
+		leftX @ (topY + off).
+		(leftX + arrowSize) @ (lineMidY + off).
+		leftX @ (botY + off)
+	} fillStyle: Color red
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawRemovedArrowOnAthens: aCanvas atLine: line [
+	| arrowSize leftX lineMidY topY botY off |
+	arrowSize := self indicatorWidth.
+	leftX := self bounds left + self horizontalGapBefore.
+	lineMidY := (line top + line bottom) // 2.
+	topY := lineMidY - (arrowSize // 2).
+	botY := lineMidY + (arrowSize // 2).
+	off := self offset y negated + self bounds top.
+	aCanvas setShape: (aCanvas createPath: [ :builder |
+		builder absolute.
+		builder moveTo: leftX @ (topY + off).
+		builder lineTo: (leftX + arrowSize) @ (lineMidY + off).
+		builder lineTo: leftX @ (botY + off).
+		builder close ]).
+	aCanvas setPaint: Color red.
+	aCanvas draw
 ]
 
 { #category : 'accessing' }
@@ -208,6 +256,11 @@ RubGutterDiffDisplayer >> level [
 { #category : 'accessing' }
 RubGutterDiffDisplayer >> lineStates [
 	^ lineStates
+]
+
+{ #category : 'accessing' }
+RubGutterDiffDisplayer >> removedPositions [
+	^ removedPositions
 ]
 
 { #category : 'event handling' }

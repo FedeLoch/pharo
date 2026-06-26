@@ -51,14 +51,14 @@ line3'.
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testFirstLineReplaced [
-	"Replaced content at the same position shows as #added (LCS diff)"
+	"Positional diff: position 1 differs → #modified (blue)"
 	morph setTextWith: 'modified1
 line2
 line3'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#added #unchanged #unchanged) asArray
+		equals: #(#modified #unchanged #unchanged) asArray
 ]
 
 { #category : 'tests' }
@@ -75,6 +75,7 @@ RubGutterDiffDisplayerTest >> testGutterDiffRulerRemoved [
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testInsertLineInMiddle [
+	"Positional diff: shifted lines show as #modified, extra line as #added"
 	morph setTextWith: 'line1
 inserted
 line2
@@ -82,19 +83,19 @@ line3'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#unchanged #added #unchanged #unchanged) asArray
+		equals: #(#unchanged #modified #modified #added) asArray
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testLastLineReplaced [
-	"Replaced content at the same position shows as #added (LCS diff)"
+	"Positional diff: position 3 differs → #modified (blue)"
 	morph setTextWith: 'line1
 line2
 modified3'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#unchanged #unchanged #added) asArray
+		equals: #(#unchanged #unchanged #modified) asArray
 ]
 
 { #category : 'tests' }
@@ -110,15 +111,64 @@ line3'.
 ]
 
 { #category : 'tests' }
+RubGutterDiffDisplayerTest >> testLinesRemovedAtEnd [
+	"Trailing baseline lines trigger removal arrows at last current line"
+	morph setTextWith: 'line1'.
+	ruler computeLineStates.
+	self
+		assert: ruler lineStates
+		equals: #(#unchanged) asArray.
+	self assert: ruler removedPositions asArray equals: #(1)
+]
+
+{ #category : 'tests' }
 RubGutterDiffDisplayerTest >> testMultipleLinesReplaced [
-	"Multiple lines replaced show as #added (LCS diff)"
+	"Positional diff: positions 1 and 3 differ → #modified (blue)"
 	morph setTextWith: 'modified1
 line2
 modified3'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#added #unchanged #added) asArray
+		equals: #(#modified #unchanged #modified) asArray
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testNoRemovalsWhenSameLength [
+	"Same-length texts have no removed positions"
+	morph setTextWith: 'line1
+line2
+modified3'.
+	ruler computeLineStates.
+	self assert: ruler removedPositions isEmpty
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testRemovedPositionsAfterDeletion [
+	"Deleting a line records the position for a red arrow"
+	ruler baseline: 'a
+b
+c
+d'.
+	morph setTextWith: 'a
+b
+c'.
+	ruler computeLineStates.
+	self assert: ruler removedPositions asArray equals: #(3)
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testRemovedPositionsMultipleDeletions [
+	"Multiple trailing deletions all map to the last current line"
+	ruler baseline: 'a
+b
+c
+d
+e'.
+	morph setTextWith: 'a
+b'.
+	ruler computeLineStates.
+	self assert: ruler removedPositions asArray equals: #(2 2 2)
 ]
 
 { #category : 'tests' }
