@@ -16,6 +16,18 @@ Class {
 }
 
 { #category : 'testing' }
+TaskListMorph class >> isAltLeftArrow: event [
+
+	^ event asKeyCombination = Character arrowLeft alt
+]
+
+{ #category : 'testing' }
+TaskListMorph class >> isAltRightArrow: event [
+
+	^ event asKeyCombination = Character arrowRight alt
+]
+
+{ #category : 'testing' }
 TaskListMorph class >> isAltTab: event [
 
 	^ event asKeyCombination = Character tab alt
@@ -30,7 +42,19 @@ TaskListMorph class >> isAltTabShift: event [
 { #category : 'testing' }
 TaskListMorph class >> isNavigationEvent: event [
 
-	^ (self isAltTab: event) or: [ self isAltTabShift: event ]
+	^ (self isNextTab: event) or: [ self isPreviousTab: event ]
+]
+
+{ #category : 'testing' }
+TaskListMorph class >> isNextTab: event [
+
+	^ (self isAltTab: event) or: [ self isAltRightArrow: event ]
+]
+
+{ #category : 'testing' }
+TaskListMorph class >> isPreviousTab: event [
+
+	^ (self isAltTabShift: event) or: [ self isAltLeftArrow: event ]
 ]
 
 { #category : 'settings' }
@@ -250,9 +274,9 @@ TaskListMorph >> minimumExtent [
 { #category : 'event handling' }
 TaskListMorph >> moveTabSelection: event [
 
-	event shiftPressed
-		ifTrue: [ self selectPreviousTask ]
-		ifFalse: [ self selectNextTask ]
+	(self class isNextTab: event)
+		ifTrue: [ self selectNextTask ]
+		ifFalse: [ self selectPreviousTask ]
 ]
 
 { #category : 'open/close' }
