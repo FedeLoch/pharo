@@ -1,11 +1,8 @@
 "
-I am a compact popup morph showing a DiffMorph preview of a specific line range.
-I appear when the user clicks on a changed line indicator in the gutter.
+I show a unified diff of the clicked line area using `TextDiffBuilder>>buildDisplayPatch`.
+Added lines appear in green bold, removed lines in red bold.
 
-I show the original vs current version of the clicked line with N lines of context
-(default: 3), using a side-by-side DiffMorph.
-
-Dismissal: press Escape key or click outside the popup.
+Dismissal: click outside the popup, click in the method editor, or press Escape.
 "
 Class {
 	#name : 'RubGutterDiffPreviewMorph',
@@ -52,18 +49,22 @@ RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent popupExtent |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder diffText popupExtent |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
 	endIdx := (lineIndex + contextLines) min: currentLines size.
 	contextBaseline := self extractContextFromLines: baselineLines start: startIdx end: endIdx.
 	contextCurrent := self extractContextFromLines: currentLines start: startIdx end: endIdx.
-	diffMorph := DiffMorph from: contextBaseline to: contextCurrent.
-	diffMorph
-		hResizing: #spaceFill;
-		vResizing: #spaceFill.
+	builder := TextDiffBuilder from: contextBaseline to: contextCurrent.
+	diffText := builder buildDisplayPatch.
 	popupExtent := (previewWidth ifNil: [ 500 ]) @ 200.
+	diffMorph := RubScrolledTextMorph new
+		extent: popupExtent;
+		text: diffText;
+		beWrapped;
+		withLineNumbers;
+		yourself.
 	self
 		changeProportionalLayout;
 		addMorph: diffMorph
