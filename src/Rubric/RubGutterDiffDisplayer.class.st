@@ -380,18 +380,26 @@ RubGutterDiffDisplayer >> selectionChanged [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> showPreviewAtLine: lineIndex [
-	| currentText preview |
+	| currentText preview previewWidth worldBounds previewPos |
 	previewMorph ifNotNil: [
 		previewMorph delete.
 		previewMorph := nil ].
 	currentText := self textArea text asString.
+	previewWidth := (self textArea width * 0.8) max: 300.
 	preview := RubGutterDiffPreviewMorph
 		forLine: lineIndex
 		baseline: (baseline ifNil: [ currentText ])
 		current: currentText
-		context: 3.
+		context: 3
+		width: previewWidth.
 	preview openInWorld.
-	preview position: self bounds topRight + (5 @ 0).
+	worldBounds := self world ifNotNil: [ :w | w bounds ] ifNil: [ 0@0 corner: 2000@2000 ].
+	previewPos := self bounds topRight + (5 @ 0).
+	(previewPos x + preview width) > worldBounds right ifTrue: [
+		previewPos := (worldBounds right - preview width - 5) @ previewPos y ].
+	(previewPos y + preview height) > worldBounds bottom ifTrue: [
+		previewPos := previewPos x @ (worldBounds bottom - preview height - 5) ].
+	preview position: previewPos.
 	previewMorph := preview
 ]
 

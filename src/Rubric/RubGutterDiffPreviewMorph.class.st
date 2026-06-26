@@ -16,7 +16,7 @@ Class {
 		'contextLines',
 		'baselineText',
 		'currentText',
-		'closeButton'
+		'previewWidth'
 	],
 	#category : 'Rubric-Editing-Widgets',
 	#package : 'Rubric',
@@ -24,12 +24,13 @@ Class {
 }
 
 { #category : 'instance creation' }
-RubGutterDiffPreviewMorph class >> forLine: lineIndex baseline: baselineString current: currentString context: contextSize [
+RubGutterDiffPreviewMorph class >> forLine: lineIndex baseline: baselineString current: currentString context: contextSize width: previewWidth [
 	^ self new
 		lineIndex: lineIndex;
 		baselineText: baselineString;
 		currentText: currentString;
 		contextLines: contextSize;
+		previewWidth: previewWidth;
 		buildDiff;
 		yourself
 ]
@@ -44,9 +45,14 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 	baselineText := aString
 ]
 
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> previewWidth: anInteger [
+	previewWidth := anInteger
+]
+
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent popupExtent |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -56,8 +62,8 @@ RubGutterDiffPreviewMorph >> buildDiff [
 	diffMorph := DiffMorph from: contextBaseline to: contextCurrent.
 	diffMorph
 		hResizing: #spaceFill;
-		vResizing: #spaceFill;
-		extent: 400 @ 200.
+		vResizing: #spaceFill.
+	popupExtent := (previewWidth ifNil: [ 500 ]) @ 200.
 	self
 		changeProportionalLayout;
 		addMorph: diffMorph
@@ -66,7 +72,7 @@ RubGutterDiffPreviewMorph >> buildDiff [
 			bottomOffset: 0;
 			leftOffset: 0;
 			rightOffset: 0);
-		extent: 400 @ 200;
+		extent: popupExtent;
 		color: Color white;
 		borderWidth: 1;
 		borderColor: Color gray
@@ -94,8 +100,8 @@ RubGutterDiffPreviewMorph >> currentText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> delete [
-	super delete.
-	self announcer ifNotNil: [ :ann | ann unsubscribe: self ]
+	self world ifNotNil: [ :w | w announcer unsubscribe: self ].
+	super delete
 ]
 
 { #category : 'private' }
@@ -126,6 +132,19 @@ RubGutterDiffPreviewMorph >> keyDown: anEvent [
 		self delete.
 		^ true ].
 	^ super keyDown: anEvent
+]
+
+{ #category : 'event handling' }
+RubGutterDiffPreviewMorph >> onWorldClick: anEvent [
+	(self bounds containsPoint: anEvent position) ifFalse: [
+		self delete ]
+]
+
+{ #category : 'opening' }
+RubGutterDiffPreviewMorph >> openInWorld [
+	super openInWorld.
+	self world ifNotNil: [ :w |
+		w announcer when: MouseButtonDownEvent send: #onWorldClick: to: self ]
 ]
 
 { #category : 'accessing' }
