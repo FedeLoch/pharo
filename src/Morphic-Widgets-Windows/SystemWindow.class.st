@@ -3163,7 +3163,7 @@ SystemWindow >> useHideForClose [
 	^ self class useHideForClose
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 SystemWindow >> viewType [
 	
 	^ model class
