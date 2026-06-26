@@ -100,7 +100,7 @@ RubGutterDiffPreviewMorph >> currentText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> delete [
-	self world ifNotNil: [ :w | w announcer unsubscribe: self ].
+	self activeHand ifNotNil: [ :hand | hand removeEventListener: self ].
 	super delete
 ]
 
@@ -119,6 +119,13 @@ RubGutterDiffPreviewMorph >> handlesKeyboard: evt [
 	^ true
 ]
 
+{ #category : 'event handling' }
+RubGutterDiffPreviewMorph >> handleListenEvent: anEvent [
+	anEvent isMouseDown ifTrue: [
+		(self bounds containsPoint: anEvent position) ifFalse: [
+			self delete ] ]
+]
+
 { #category : 'initialization' }
 RubGutterDiffPreviewMorph >> initialize [
 	super initialize.
@@ -134,17 +141,10 @@ RubGutterDiffPreviewMorph >> keyDown: anEvent [
 	^ super keyDown: anEvent
 ]
 
-{ #category : 'event handling' }
-RubGutterDiffPreviewMorph >> onWorldClick: anEvent [
-	(self bounds containsPoint: anEvent position) ifFalse: [
-		self delete ]
-]
-
 { #category : 'opening' }
 RubGutterDiffPreviewMorph >> openInWorld [
 	super openInWorld.
-	self world ifNotNil: [ :w |
-		w announcer when: MouseButtonDownEvent send: #onWorldClick: to: self ]
+	self activeHand addEventListener: self
 ]
 
 { #category : 'accessing' }
