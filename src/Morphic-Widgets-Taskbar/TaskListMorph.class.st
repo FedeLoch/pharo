@@ -299,6 +299,7 @@ TaskListMorph >> postOpenInWorld: aWorld [
 TaskListMorph >> preOpenInWorld: aWorld [
 
 	"Nothing to do"
+	tasks do: [ :task | task cleanCachedThumb ]
 ]
 
 { #category : 'cycling' }
@@ -441,7 +442,7 @@ TaskListMorph >> updateTask: task extent: previewExtent [
 	scaleFactor := previewExtent x / self defaultPreviewExtent x.
 	labelTruncation := (25 * scaleFactor) asInteger max: 8.
 	fontSize := (11 * scaleFactor) asInteger max: 8.
-	thumb := task morph taskThumbnailOfSize: previewExtent.
+	thumb := task taskThumbnailOfSize: previewExtent.
 	thumb extent: previewExtent.
 
 	thumbWrapper := (self thumbWrapper: task) addMorphBack: thumb; yourself.
