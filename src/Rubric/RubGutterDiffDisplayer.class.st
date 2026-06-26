@@ -72,7 +72,7 @@ RubGutterDiffDisplayer >> colorForState: aSymbol [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> computeLineStates [
-	| currentText currentLines baselineLines common |
+	| currentText currentLines baselineLines builder yLines xLines xLineStream dstIdx |
 	baseline ifNil: [ ^ self ].
 	self textArea ifNil: [ ^ self ].
 	currentText := self textArea text asString.
@@ -80,16 +80,25 @@ RubGutterDiffDisplayer >> computeLineStates [
 	baselineLines := baseline lines.
 	lineStates := Array new: currentLines size withAll: #unchanged.
 	removedPositions := OrderedCollection new.
-	common := baselineLines size min: currentLines size.
-	1 to: common do: [ :i |
-		(baselineLines at: i) ~= (currentLines at: i)
-			ifTrue: [ lineStates at: i put: #modified ] ].
-	common + 1 to: currentLines size do: [ :i |
-		lineStates at: i put: #added ].
-	common + 1 to: baselineLines size do: [ :i |
-		| pos |
-		pos := i min: currentLines size.
-		pos > 0 ifTrue: [ removedPositions add: pos ] ]
+	builder := TextDiffBuilder from: baseline to: currentText.
+	yLines := builder instVarNamed: 'yLines'.
+	xLines := builder instVarNamed: 'xLines'.
+	xLineStream := xLines readStream.
+	dstIdx := 1.
+	yLines do: [ :yLine |
+		yLine hasMatch
+			ifFalse: [
+				dstIdx <= lineStates size ifTrue: [
+					lineStates at: dstIdx put: #added ].
+				dstIdx := dstIdx + 1 ]
+			ifTrue: [
+				[ (xLine := xLineStream next) isNil
+					or: [ xLine == yLine match ] ]
+						whileFalse: [
+							removedPositions add: dstIdx ].
+				dstIdx := dstIdx + 1 ] ].
+	[ (xLine := xLineStream next) isNil ] whileFalse: [
+		removedPositions add: dstIdx ]
 ]
 
 { #category : 'geometry' }
@@ -117,9 +126,8 @@ RubGutterDiffDisplayer >> drawOn: aCanvas [
 				(lineStates at: i) = #unchanged ifFalse: [
 					self drawIndicatorBarOn: clippedCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
 			removedPositions do: [ :pos |
-				(pos between: firstLine and: lastLine) ifTrue: [
-					pos <= lines size ifTrue: [
-						self drawRemovedArrowOn: clippedCanvas atLine: (lines at: pos) ] ] ] ]
+				(self gapYForPosition: pos lines: lines)
+					ifNotNil: [ :y | self drawRemovedArrowAtY: y on: clippedCanvas ] ] ]
 ]
 
 { #category : 'drawing' }
@@ -144,9 +152,8 @@ RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
 				(lineStates at: i) = #unchanged ifFalse: [
 					self drawIndicatorBarOnAthens: aCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
 			removedPositions do: [ :pos |
-				(pos between: firstLine and: lastLine) ifTrue: [
-					pos <= lines size ifTrue: [
-						self drawRemovedArrowOnAthens: aCanvas atLine: (lines at: pos) ] ] ] ]
+				(self gapYForPosition: pos lines: lines)
+					ifNotNil: [ :y | self drawRemovedArrowAtY: y onAthens: aCanvas ] ] ]
 ]
 
 { #category : 'drawing' }
@@ -174,38 +181,48 @@ RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol at
 ]
 
 { #category : 'drawing' }
-RubGutterDiffDisplayer >> drawRemovedArrowOn: aCanvas atLine: line [
-	| arrowSize leftX lineMidY topY botY off |
+RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord on: aCanvas [
+	| arrowSize leftX topY botY off |
 	arrowSize := self indicatorWidth.
 	leftX := self bounds left + self horizontalGapBefore.
-	lineMidY := (line top + line bottom) // 2.
-	topY := lineMidY - (arrowSize // 2).
-	botY := lineMidY + (arrowSize // 2).
 	off := self offset y negated + self bounds top.
+	topY := yCoord - (arrowSize // 2) + off.
+	botY := yCoord + (arrowSize // 2) + off.
 	aCanvas drawPolygon: {
-		leftX @ (topY + off).
-		(leftX + arrowSize) @ (lineMidY + off).
-		leftX @ (botY + off)
+		leftX @ topY.
+		(leftX + arrowSize) @ (yCoord + off).
+		leftX @ botY
 	} fillStyle: Color red
 ]
 
 { #category : 'drawing' }
-RubGutterDiffDisplayer >> drawRemovedArrowOnAthens: aCanvas atLine: line [
-	| arrowSize leftX lineMidY topY botY off |
+RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord onAthens: aCanvas [
+	| arrowSize leftX topY botY off |
 	arrowSize := self indicatorWidth.
 	leftX := self bounds left + self horizontalGapBefore.
-	lineMidY := (line top + line bottom) // 2.
-	topY := lineMidY - (arrowSize // 2).
-	botY := lineMidY + (arrowSize // 2).
 	off := self offset y negated + self bounds top.
+	topY := yCoord - (arrowSize // 2) + off.
+	botY := yCoord + (arrowSize // 2) + off.
 	aCanvas setShape: (aCanvas createPath: [ :builder |
 		builder absolute.
-		builder moveTo: leftX @ (topY + off).
-		builder lineTo: (leftX + arrowSize) @ (lineMidY + off).
-		builder lineTo: leftX @ (botY + off).
+		builder moveTo: leftX @ topY.
+		builder lineTo: (leftX + arrowSize) @ (yCoord + off).
+		builder lineTo: leftX @ botY.
 		builder close ]).
 	aCanvas setPaint: Color red.
 	aCanvas draw
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> gapYForPosition: pos lines: lines [
+	"Return the Y coordinate in TEXT space where a removal arrow should be drawn.
+	pos is a 1-indexed position in the current text's line array where a gap exists.
+	Returns nil if the gap is not visible (e.g., trailing removal when no lines exist)."
+	pos = 1 ifTrue: [
+		^ lines isEmpty ifFalse: [ lines first top - 2 ] ifTrue: [ nil ] ].
+	pos > lines size ifTrue: [
+		^ lines isEmpty ifFalse: [ lines last bottom + 2 ] ifTrue: [ nil ] ].
+	^ (lines at: pos - 1) bottom + (lines at: pos) top // 2
 ]
 
 { #category : 'accessing' }
