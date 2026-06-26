@@ -149,7 +149,7 @@ TaskbarTask >> taskListButtonFor: aTasklist [
 		for: self
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'accessing' }
 TaskbarTask >> taskThumbnailOfSize: extent [ 
 
 	((lastCachedThumb isNil) or: [ lastCachedExtent ~= extent ]) ifTrue: [
