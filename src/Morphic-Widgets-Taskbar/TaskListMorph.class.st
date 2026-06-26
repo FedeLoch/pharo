@@ -16,9 +16,21 @@ Class {
 }
 
 { #category : 'testing' }
-TaskListMorph class >> isNavigationEvent: aKeyboardEvent [
+TaskListMorph class >> isAltTab: event [
 
-	^ aKeyboardEvent asKeyCombination = Character tab alt or: [ aKeyboardEvent asKeyCombination = Character tab alt shift ]
+	^ event asKeyCombination = Character tab alt
+]
+
+{ #category : 'testing' }
+TaskListMorph class >> isAltTabShift: event [
+
+	^ event asKeyCombination = Character tab alt shift
+]
+
+{ #category : 'testing' }
+TaskListMorph class >> isNavigationEvent: event [
+
+	^ (self isAltTab: event) or: [ self isAltTabShift: event ]
 ]
 
 { #category : 'settings' }
