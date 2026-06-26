@@ -23,7 +23,7 @@ RubEpiceaMethodBaselineProvider >> baselineForMethod: aCompiledMethod [
 		fromHeadDetect: [ :each |
 			| event |
 			event := each content.
-			event isEpMethodModification and: [
+			(event isKindOf: EpMethodModification) and: [
 				event behaviorAffectedName = className and: [
 				event methodAffectedSelector = selector ] ] ]
 		ifNotFound: [ nil ].
