@@ -72,7 +72,7 @@ RubGutterDiffDisplayer >> colorForState: aSymbol [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> computeLineStates [
-	| currentText currentLines baselineLines common |
+	| currentText currentLines baselineLines builder yLines xLines matchedY matchedX common uc ub numPairs |
 	baseline ifNil: [ ^ self ].
 	self textArea ifNil: [ ^ self ].
 	currentText := self textArea text asString.
@@ -80,14 +80,55 @@ RubGutterDiffDisplayer >> computeLineStates [
 	baselineLines := baseline lines.
 	lineStates := Array new: currentLines size withAll: #unchanged.
 	removedPositions := OrderedCollection new.
+
+	"Phase 1: LCS matching — find which current lines match which baseline lines"
+	builder := TextDiffBuilder from: baseline to: currentText.
+	yLines := builder instVarNamed: 'yLines'.
+	xLines := builder instVarNamed: 'xLines'.
+	matchedY := Array new: currentLines size withAll: 0.
+	matchedX := Array new: baselineLines size withAll: 0.
+	1 to: yLines size do: [ :yi |
+		(yLines at: yi) hasMatch ifTrue: [
+			| yMatch |
+			yMatch := (yLines at: yi) match.
+			1 to: xLines size do: [ :xj |
+				(xLines at: xj) == yMatch ifTrue: [
+					matchedY at: yi put: xj.
+					matchedX at: xj put: yi ] ] ] ].
+
+	"Phase 2: Collect unmatched current/baseline positions within the common range"
 	common := baselineLines size min: currentLines size.
+	uc := OrderedCollection new.
+	ub := OrderedCollection new.
 	1 to: common do: [ :i |
-		(baselineLines at: i) ~= (currentLines at: i)
-			ifTrue: [ lineStates at: i put: #modified ] ].
+		(baselineLines at: i) ~= (currentLines at: i) ifTrue: [
+			(matchedY at: i) = 0 ifTrue: [ uc add: i ].
+			(matchedX at: i) = 0 ifTrue: [ ub add: i ] ] ].
+
+	"Phase 3: Pair unmatched currents with unmatched baselines in reverse order.
+	Reverse-order pairing produces correct results when insertions shift subsequent
+	modifications forward: the last unmatched current pairs with the last unmatched
+	baseline. Excess currents (first unpaired) are true insertions → #added.
+	Excess baselines (first unpaired) are true deletions → #removed."
+	numPairs := uc size min: ub size.
+	numPairs > 0 ifTrue: [
+		1 to: numPairs do: [ :k |
+			| yi xi |
+			yi := uc at: uc size - numPairs + k.
+			xi := ub at: ub size - numPairs + k.
+			lineStates at: yi put: #modified ] ].
+	1 to: uc size - numPairs do: [ :k |
+		lineStates at: (uc at: k) put: #added ].
+	1 to: ub size - numPairs do: [ :k |
+		removedPositions add: (ub at: k) ].
+
+	"Phase 4: Extra current lines → #added (only if unmatched by LCS)"
 	common + 1 to: currentLines size do: [ :i |
-		lineStates at: i put: #added ].
+		(matchedY at: i) = 0 ifTrue: [ lineStates at: i put: #added ] ].
+
+	"Phase 5: Extra baseline lines → #removed (only if unmatched by LCS)"
 	common + 1 to: baselineLines size do: [ :i |
-		removedPositions add: i ]
+		(matchedX at: i) = 0 ifTrue: [ removedPositions add: i ] ]
 ]
 
 { #category : 'geometry' }

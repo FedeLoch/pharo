@@ -79,7 +79,7 @@ RubGutterDiffDisplayerTest >> testGutterDiffRulerRemoved [
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testInsertLineInMiddle [
-	"Positional: shifted lines show as #modified, extra line as #added"
+	"LCS-based: inserted line → #added (green), shifted lines remain #unchanged"
 	morph setTextWith: 'line1
 inserted
 line2
@@ -87,7 +87,7 @@ line3'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#unchanged #modified #modified #added) asArray.
+		equals: #(#unchanged #added #unchanged #unchanged) asArray.
 	self assert: ruler removedPositions isEmpty
 ]
 
@@ -171,15 +171,54 @@ b'.
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testRemovedPositionInsideText [
-	"Deleting middle line shows removal arrow at original position, adjacent line as #modified"
+	"Deleting middle line shows removal arrow at original position; remaining line is LCS-matched → #unchanged"
 	ruler baseline: 'line1
 line2
 line3'.
 	morph setTextWith: 'line1
 line3'.
 	ruler computeLineStates.
-	self assert: ruler lineStates equals: #(#unchanged #modified) asArray.
-	self assert: ruler removedPositions asArray equals: #(3)
+	self assert: ruler lineStates equals: #(#unchanged #unchanged) asArray.
+	self assert: ruler removedPositions asArray equals: #(2)
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testInsertAndEditNearby [
+	"Editing a line AND inserting a line nearby: the edited line keeps #modified,
+	the new line is #added, and subsequent identical lines stay #unchanged"
+	ruler baseline: 'line1
+line2
+line3
+line4'.
+	morph setTextWith: 'line1
+inserted
+edited2
+line3
+line4'.
+	ruler computeLineStates.
+	self
+		assert: ruler lineStates
+		equals: #(#unchanged #added #modified #unchanged #unchanged) asArray.
+	self assert: ruler removedPositions isEmpty
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testMultipleDeletionsInMiddle [
+	"Deleting multiple lines in the middle leaves remaining lines LCS-matched → #unchanged,
+	with removal arrows at the original baseline positions"
+	ruler baseline: 'a
+b
+c
+d
+e'.
+	morph setTextWith: 'a
+d
+e'.
+	ruler computeLineStates.
+	self
+		assert: ruler lineStates
+		equals: #(#unchanged #unchanged #unchanged) asArray.
+	self assert: ruler removedPositions asArray equals: #(2 3)
 ]
 
 { #category : 'tests' }
