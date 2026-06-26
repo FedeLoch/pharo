@@ -298,7 +298,7 @@ RubGutterDiffDisplayer >> horizontalGapBefore [
 
 { #category : 'geometry' }
 RubGutterDiffDisplayer >> indicatorWidth [
-	^ 6
+	^ 8
 ]
 
 { #category : 'accessing' }
