@@ -53,7 +53,7 @@ TaskbarTask >> buttonClickedForTaskList: aTasklist [
 	aTasklist taskClicked: self
 ]
 
-{ #category : 'as yet unclassified' }
+{ #category : 'initialization' }
 TaskbarTask >> cleanCachedThumb [
 
 	lastCachedExtent := nil.
