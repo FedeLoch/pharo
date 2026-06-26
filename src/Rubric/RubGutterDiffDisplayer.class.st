@@ -43,12 +43,6 @@ RubGutterDiffDisplayer class >> key [
 	^ #gutterDiff
 ]
 
-{ #category : 'initialization' }
-RubGutterDiffDisplayer >> initialize [
-	super initialize.
-	removedPositions := OrderedCollection new
-]
-
 { #category : 'accessing' }
 RubGutterDiffDisplayer >> baseline [
 	^ baseline
@@ -119,35 +113,39 @@ RubGutterDiffDisplayer >> computeLineStates [
 			srcLine: srcLine dstLine: dstLine ]
 ]
 
-{ #category : 'private' }
-RubGutterDiffDisplayer >> flushDiffRunSrcStart: srcStart srcEnd: srcEnd dstStart: dstStart dstEnd: dstEnd srcLine: srcLine dstLine: dstLine [
-	"Flush a collected run of patch entries. Based on which sides have content:
-	- source only → #removal gap at dstLine+1
-	- destination only → #added lines in [dstStart..dstEnd]
-	- both → #modified lines in [dstStart..dstEnd]"
-	| hasSrc hasDst |
-	hasSrc := srcStart > 0.
-	hasDst := dstStart > 0.
-	hasSrc ifFalse: [
-		hasDst ifTrue: [
-			dstStart to: dstEnd do: [ :i |
-				lineStates at: i put: #added ] ].
-		^ self ].
-	hasDst ifFalse: [
-		removedPositions add: dstLine + 1.
-		^ self ].
-	dstStart to: dstEnd do: [ :i |
-		lineStates at: i put: #modified ]
-]
-
 { #category : 'geometry' }
 RubGutterDiffDisplayer >> computedWidthFrom: aRectangle [
 	^ (self indicatorWidth + self horizontalGapBefore + self horizontalGapAfter + self verticalSeparatorWidth) truncated
 ]
 
 { #category : 'drawing' }
+RubGutterDiffDisplayer >> drawIndicatorBarOn: aCanvas forState: aSymbol atLine: line [
+	| indicatorColor indicatorBounds |
+	indicatorColor := self colorForState: aSymbol.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
+		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas fillRectangle: indicatorBounds color: indicatorColor
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol atLine: line [
+	| indicatorColor indicatorBounds |
+	indicatorColor := self colorForState: aSymbol.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
+		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas setShape: indicatorBounds.
+	aCanvas setPaint: indicatorColor.
+	aCanvas draw
+]
+
+{ #category : 'drawing' }
 RubGutterDiffDisplayer >> drawOn: aCanvas [
 	| lines visibleRectangle firstLine lastLine |
+
 	super drawOn: aCanvas.
 	self paragraph ifNil: [ ^ self ].
 	self paragraph lines ifNil: [ ^ self ].
@@ -160,7 +158,7 @@ RubGutterDiffDisplayer >> drawOn: aCanvas [
 			visibleRectangle := clippedCanvas clipRect.
 			firstLine := self lineIndexForPoint: visibleRectangle topLeft.
 			lastLine := self lineIndexForPoint: visibleRectangle bottomRight.
-			firstLine to: (lastLine min: lineStates size min: lines size) do: [ :i |
+			firstLine to: ((lastLine min: lineStates size) min: lines size) do: [ :i |
 				(lineStates at: i) = #unchanged ifFalse: [
 					self drawIndicatorBarOn: clippedCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
 			removedPositions do: [ :pos |
@@ -191,30 +189,6 @@ RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
 			removedPositions do: [ :pos |
 				(self gapYForPosition: pos lines: lines)
 					ifNotNil: [ :y | self drawRemovedArrowAtY: y onAthens: aCanvas ] ] ]
-]
-
-{ #category : 'drawing' }
-RubGutterDiffDisplayer >> drawIndicatorBarOn: aCanvas forState: aSymbol atLine: line [
-	| indicatorColor indicatorBounds |
-	indicatorColor := self colorForState: aSymbol.
-	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
-		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
-	indicatorBounds := indicatorBounds
-		translateBy: 0 @ (self offset y negated + self bounds top).
-	aCanvas fillRectangle: indicatorBounds color: indicatorColor
-]
-
-{ #category : 'drawing' }
-RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol atLine: line [
-	| indicatorColor indicatorBounds |
-	indicatorColor := self colorForState: aSymbol.
-	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
-		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
-	indicatorBounds := indicatorBounds
-		translateBy: 0 @ (self offset y negated + self bounds top).
-	aCanvas setShape: indicatorBounds.
-	aCanvas setPaint: indicatorColor.
-	aCanvas draw
 ]
 
 { #category : 'drawing' }
@@ -252,18 +226,6 @@ RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord onAthens: aCanvas [
 	aCanvas draw
 ]
 
-{ #category : 'drawing' }
-RubGutterDiffDisplayer >> gapYForPosition: pos lines: lines [
-	"Return the Y coordinate in TEXT space where a removal arrow should be drawn.
-	pos is a 1-indexed position in the current text's line array where a gap exists.
-	Returns nil if the gap is not visible (e.g., trailing removal when no lines exist)."
-	pos = 1 ifTrue: [
-		^ lines isEmpty ifFalse: [ lines first top - 2 ] ifTrue: [ nil ] ].
-	pos > lines size ifTrue: [
-		^ lines isEmpty ifFalse: [ lines last bottom + 2 ] ifTrue: [ nil ] ].
-	^ (lines at: pos - 1) bottom + (lines at: pos) top // 2
-]
-
 { #category : 'accessing' }
 RubGutterDiffDisplayer >> editingMethod [
 	^ editingMethod
@@ -275,6 +237,27 @@ RubGutterDiffDisplayer >> editingMethod: aCompiledMethod [
 ]
 
 { #category : 'private' }
+RubGutterDiffDisplayer >> flushDiffRunSrcStart: srcStart srcEnd: srcEnd dstStart: dstStart dstEnd: dstEnd srcLine: srcLine dstLine: dstLine [
+	"Flush a collected run of patch entries. Based on which sides have content:
+	- source only → #removal gap at dstLine+1
+	- destination only → #added lines in [dstStart..dstEnd]
+	- both → #modified lines in [dstStart..dstEnd]"
+	| hasSrc hasDst |
+	hasSrc := srcStart > 0.
+	hasDst := dstStart > 0.
+	hasSrc ifFalse: [
+		hasDst ifTrue: [
+			dstStart to: dstEnd do: [ :i |
+				lineStates at: i put: #added ] ].
+		^ self ].
+	hasDst ifFalse: [
+		removedPositions add: dstLine + 1.
+		^ self ].
+	dstStart to: dstEnd do: [ :i |
+		lineStates at: i put: #modified ]
+]
+
+{ #category : 'private' }
 RubGutterDiffDisplayer >> forwardMouseEventToTextArea: anEvent [
 	| lineIndex line |
 	lineIndex := self lineIndexForPoint: anEvent position.
@@ -282,6 +265,18 @@ RubGutterDiffDisplayer >> forwardMouseEventToTextArea: anEvent [
 	line := self lines at: lineIndex.
 	anEvent setPosition: line topLeft.
 	self textArea mouseDown: anEvent
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> gapYForPosition: pos lines: lines [
+	"Return the Y coordinate in TEXT space where a removal arrow should be drawn.
+	pos is a 1-indexed position in the current text's line array where a gap exists.
+	Returns nil if the gap is not visible (e.g., trailing removal when no lines exist)."
+	pos = 1 ifTrue: [
+		^ lines isEmpty ifFalse: [ lines first top - 2 ] ifTrue: [ nil ] ].
+	pos > lines size ifTrue: [
+		^ lines isEmpty ifFalse: [ lines last bottom + 2 ] ifTrue: [ nil ] ].
+	^ (lines at: pos - 1) bottom + (lines at: pos) top // 2
 ]
 
 { #category : 'event handling' }
@@ -304,6 +299,12 @@ RubGutterDiffDisplayer >> indicatorWidth [
 	^ 8
 ]
 
+{ #category : 'initialization' }
+RubGutterDiffDisplayer >> initialize [
+	super initialize.
+	removedPositions := OrderedCollection new
+]
+
 { #category : 'accessing' }
 RubGutterDiffDisplayer >> level [
 	^ 3
@@ -312,11 +313,6 @@ RubGutterDiffDisplayer >> level [
 { #category : 'accessing' }
 RubGutterDiffDisplayer >> lineStates [
 	^ lineStates
-]
-
-{ #category : 'accessing' }
-RubGutterDiffDisplayer >> removedPositions [
-	^ removedPositions
 ]
 
 { #category : 'event handling' }
@@ -362,6 +358,11 @@ RubGutterDiffDisplayer >> refreshBaseline [
 		ifNone: [ self textArea text asString ].
 	self computeLineStates.
 	self changed
+]
+
+{ #category : 'accessing' }
+RubGutterDiffDisplayer >> removedPositions [
+	^ removedPositions
 ]
 
 { #category : 'event handling' }
