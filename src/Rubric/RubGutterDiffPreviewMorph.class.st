@@ -1,6 +1,7 @@
 "
-I show a unified diff of the clicked line area using `TextDiffBuilder>>buildDisplayPatch`.
-Added lines appear in green bold, removed lines in red bold.
+I show a unified (inline) diff of the clicked line area.
+Added lines have a green background, removed lines a red background,
+matching DiffMorph's theme colors.
 
 Dismissal: click outside the popup, click in the method editor, or press Escape.
 "
@@ -49,7 +50,7 @@ RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder diffText popupExtent |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder patchText popupExtent themeColors |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -57,11 +58,19 @@ RubGutterDiffPreviewMorph >> buildDiff [
 	contextBaseline := self extractContextFromLines: baselineLines start: startIdx end: endIdx.
 	contextCurrent := self extractContextFromLines: currentLines start: startIdx end: endIdx.
 	builder := TextDiffBuilder from: contextBaseline to: contextCurrent.
-	diffText := builder buildDisplayPatch.
+	themeColors := UITheme current.
+	patchText := Text streamContents: [ :stream |
+		builder
+			patchSequenceDoIfMatch: [ :string |
+				self writeLine: string withBackground: nil on: stream ]
+			ifInsert: [ :string |
+				self writeLine: string withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
+			ifRemove: [ :string |
+				self writeLine: string withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
 	popupExtent := (previewWidth ifNil: [ 500 ]) @ 200.
 	diffMorph := RubScrolledTextMorph new
 		extent: popupExtent;
-		text: diffText;
+		setText: patchText;
 		beWrapped;
 		withLineNumbers;
 		yourself.
@@ -113,6 +122,19 @@ RubGutterDiffPreviewMorph >> extractContextFromLines: lines start: startIdx end:
 			line := lines at: i ifAbsent: [ '' ].
 			stream nextPutAll: line.
 			i < endIdx ifTrue: [ stream cr ] ] ]
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> writeLine: aString withBackground: aColor on: stream [
+	aColor ifNil: [
+		stream nextPutAll: aString.
+		(aString notEmpty and: [ aString last = Character cr ]) ifFalse: [ stream cr ].
+		^ self ].
+	stream
+		withAttributes: { TextBackgroundColor color: aColor }
+		do: [
+			stream nextPutAll: aString.
+			(aString notEmpty and: [ aString last = Character cr ]) ifFalse: [ stream cr ] ]
 ]
 
 { #category : 'testing' }
