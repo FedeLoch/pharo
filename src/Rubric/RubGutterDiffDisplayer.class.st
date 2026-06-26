@@ -5,13 +5,20 @@ I display visual indicators in the editor gutter showing lines that differ from 
 Visual feedback per state:
   - #added:    green bar spanning the full line height
   - #modified: blue bar spanning the full line height
-  - #removed:  small red right-pointing arrow (▶) aligned to the line
+  - #removed:  small red right-pointing arrow (▶) between surrounding lines
+
+Line state classification uses TextDiffBuilder>>patchSequenceDoIfMatch:ifInsert:ifRemove:
+to walk the LCS patch sequence. Consecutive removes+inserts between matches are grouped
+into runs and flushed at each match or end-of-patch:
+  - source-only run (removes)  → gap in removedPositions
+  - destination-only run (inserts) → #added
+  - both source and destination → #modified
 
 Instance Variables:
   baseline         <String> Cached original text to diff against
   baselineProvider <RubMethodBaselineProvider> Pluggable provider for the baseline
   lineStates       <Array of Symbol> Per-line state: #unchanged, #added, #modified
-  removedPositions <OrderedCollection> 1-indexed positions in current text where a removed-line arrow should appear
+  removedPositions <OrderedCollection> 1-indexed gap positions in current text where a removed-line arrow should appear
   previewMorph     <RubGutterDiffPreviewMorph> Currently visible diff popup (or nil)
   editingMethod    <CompiledMethod> The method being edited (for baseline fetching)
 "
@@ -72,70 +79,65 @@ RubGutterDiffDisplayer >> colorForState: aSymbol [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> computeLineStates [
-	| currentText currentLines baselineLines builder yLines xLines matchedY matchedX common |
+	| currentText builder srcLine dstLine srcRunStart srcRunEnd dstRunStart dstRunEnd |
 	baseline ifNil: [ ^ self ].
 	self textArea ifNil: [ ^ self ].
 	currentText := self textArea text asString.
-	currentLines := currentText lines.
-	baselineLines := baseline lines.
-	lineStates := Array new: currentLines size withAll: #unchanged.
+	lineStates := Array new: currentText lines size withAll: #unchanged.
 	removedPositions := OrderedCollection new.
 
-	"Phase 1: LCS matching — find which current lines match which baseline lines"
 	builder := TextDiffBuilder from: baseline to: currentText.
-	yLines := builder instVarNamed: 'yLines'.
-	xLines := builder instVarNamed: 'xLines'.
-	matchedY := Array new: currentLines size withAll: 0.
-	matchedX := Array new: baselineLines size withAll: 0.
-	1 to: yLines size do: [ :yi |
-		(yLines at: yi) hasMatch ifTrue: [
-			| yMatch |
-			yMatch := (yLines at: yi) match.
-			1 to: xLines size do: [ :xj |
-				(xLines at: xj) == yMatch ifTrue: [
-					matchedY at: yi put: xj.
-					matchedX at: xj put: yi ] ] ] ].
+	srcLine := dstLine := 0.
+	srcRunStart := srcRunEnd := dstRunStart := dstRunEnd := 0.
 
-	"Phase 2: Direct classification of each differing position within the common range"
-	common := baselineLines size min: currentLines size.
-	1 to: common do: [ :i |
-		(baselineLines at: i) ~= (currentLines at: i) ifTrue: [
-			(matchedY at: i) = 0
-				ifTrue: [
-					(matchedX at: i) = 0
-						ifTrue: [ lineStates at: i put: #modified ]
-						ifFalse: [ lineStates at: i put: #added ] ]
-				ifFalse: [
-					(matchedX at: i) = 0
-						ifTrue: [ self addRemovedGapForBaselineIndex: i matchedX: matchedX ]
-						ifFalse: [ lineStates at: i put: #modified ] ] ] ].
+	builder patchSequenceDoIfMatch: [ :aString |
+		(dstRunStart > 0 or: [ srcRunStart > 0 ]) ifTrue: [
+			self flushDiffRunSrcStart: srcRunStart srcEnd: srcRunEnd
+				dstStart: dstRunStart dstEnd: dstRunEnd
+				srcLine: srcLine dstLine: dstLine.
+			srcRunStart := srcRunEnd := dstRunStart := dstRunEnd := 0 ].
+		srcLine := srcLine + 1.
+		dstLine := dstLine + 1
+	] ifInsert: [ :aString |
+		srcRunStart > 0 ifTrue: [
+			self flushDiffRunSrcStart: srcRunStart srcEnd: srcRunEnd
+				dstStart: dstRunStart dstEnd: dstRunEnd
+				srcLine: srcLine dstLine: dstLine.
+			srcRunStart := srcRunEnd := dstRunStart := dstRunEnd := 0 ].
+		dstLine := dstLine + 1.
+		dstRunStart = 0 ifTrue: [ dstRunStart := dstLine ].
+		dstRunEnd := dstLine
+	] ifRemove: [ :aString |
+		srcLine := srcLine + 1.
+		srcRunStart = 0 ifTrue: [ srcRunStart := srcLine ].
+		srcRunEnd := srcLine
+	].
 
-	"Phase 3: Extra current lines → #added (only if unmatched by LCS)"
-	common + 1 to: currentLines size do: [ :i |
-		(matchedY at: i) = 0 ifTrue: [ lineStates at: i put: #added ] ].
-
-	"Phase 4: Extra baseline lines → removal gap after last current line"
-	common + 1 to: baselineLines size do: [ :i |
-		(matchedX at: i) = 0 ifTrue: [ removedPositions add: currentLines size + 1 ] ].
-
-	"Phase 5: Collapse consecutive removal gaps — only keep the first of each run"
-	removedPositions := removedPositions asSet asOrderedCollection
-		reject: [ :pos | removedPositions includes: pos - 1 ];
-		yourself
+	(dstRunStart > 0 or: [ srcRunStart > 0 ]) ifTrue: [
+		self flushDiffRunSrcStart: srcRunStart srcEnd: srcRunEnd
+			dstStart: dstRunStart dstEnd: dstRunEnd
+			srcLine: srcLine dstLine: dstLine ]
 ]
 
 { #category : 'private' }
-RubGutterDiffDisplayer >> addRemovedGapForBaselineIndex: pos matchedX: matchedX [
-	"Map a deleted baseline line at position pos to a gap position in the current text.
-	Gap positions are 1-indexed: 1 = before first line, n+1 = after last current line.
-	The gap is placed right after the nearest preceding baseline line that has a match."
-	| gapPos |
-	gapPos := 1.
-	(pos - 1) to: 1 by: -1 do: [ :p |
-		(matchedX at: p) ~= 0 ifTrue: [
-			gapPos := (matchedX at: p) + 1.
-			^ removedPositions add: gapPos ] ].
-	removedPositions add: gapPos
+RubGutterDiffDisplayer >> flushDiffRunSrcStart: srcStart srcEnd: srcEnd dstStart: dstStart dstEnd: dstEnd srcLine: srcLine dstLine: dstLine [
+	"Flush a collected run of patch entries. Based on which sides have content:
+	- source only → #removal gap at dstLine+1
+	- destination only → #added lines in [dstStart..dstEnd]
+	- both → #modified lines in [dstStart..dstEnd]"
+	| hasSrc hasDst |
+	hasSrc := srcStart > 0.
+	hasDst := dstStart > 0.
+	hasSrc ifFalse: [
+		hasDst ifTrue: [
+			dstStart to: dstEnd do: [ :i |
+				lineStates at: i put: #added ] ].
+		^ self ].
+	hasDst ifFalse: [
+		removedPositions add: dstLine + 1.
+		^ self ].
+	dstStart to: dstEnd do: [ :i |
+		lineStates at: i put: #modified ]
 ]
 
 { #category : 'geometry' }
