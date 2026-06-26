@@ -72,7 +72,7 @@ RubGutterDiffDisplayer >> colorForState: aSymbol [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> computeLineStates [
-	| currentText currentLines baselineLines builder yLines xLines xLineStream xLine dstIdx |
+	| currentText currentLines baselineLines common |
 	baseline ifNil: [ ^ self ].
 	self textArea ifNil: [ ^ self ].
 	currentText := self textArea text asString.
@@ -80,25 +80,14 @@ RubGutterDiffDisplayer >> computeLineStates [
 	baselineLines := baseline lines.
 	lineStates := Array new: currentLines size withAll: #unchanged.
 	removedPositions := OrderedCollection new.
-	builder := TextDiffBuilder from: baseline to: currentText.
-	yLines := builder instVarNamed: 'yLines'.
-	xLines := builder instVarNamed: 'xLines'.
-	xLineStream := xLines readStream.
-	dstIdx := 1.
-	yLines do: [ :yLine |
-		yLine hasMatch
-			ifFalse: [
-				dstIdx <= lineStates size ifTrue: [
-					lineStates at: dstIdx put: #added ].
-				dstIdx := dstIdx + 1 ]
-			ifTrue: [
-				[ (xLine := xLineStream next) isNil
-					or: [ xLine == yLine match ] ]
-						whileFalse: [
-							removedPositions add: dstIdx ].
-				dstIdx := dstIdx + 1 ] ].
-	[ (xLine := xLineStream next) isNil ] whileFalse: [
-		removedPositions add: dstIdx ]
+	common := baselineLines size min: currentLines size.
+	1 to: common do: [ :i |
+		(baselineLines at: i) ~= (currentLines at: i)
+			ifTrue: [ lineStates at: i put: #modified ] ].
+	common + 1 to: currentLines size do: [ :i |
+		lineStates at: i put: #added ].
+	common + 1 to: baselineLines size do: [ :i |
+		removedPositions add: i ]
 ]
 
 { #category : 'geometry' }
