@@ -561,6 +561,11 @@ RubScrolledTextMorph >> ghostTextRuler [
 	^ self rulerNamed: #ghostText
 ]
 
+{ #category : 'accessing - rulers' }
+RubScrolledTextMorph >> gutterDiffRuler [
+	^ self rulerNamed: #gutterDiff
+]
+
 { #category : 'accessing - scrollbars' }
 RubScrolledTextMorph >> hScrollbarShowAlways [
 	self scrollPane hScrollbarShowAlways.
@@ -1322,6 +1327,11 @@ RubScrolledTextMorph >> withGhostText: aText [
 ]
 
 { #category : 'accessing - rulers' }
+RubScrolledTextMorph >> withGutterDiff [
+	self withRulerNamed: #gutterDiff
+]
+
+{ #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withLineNumbers [
 	self withRulerNamed: #lineNumbers
 ]
@@ -1362,18 +1372,8 @@ RubScrolledTextMorph >> withSourceCodeAnnotation [
 ]
 
 { #category : 'accessing - rulers' }
-RubScrolledTextMorph >> withGutterDiff [
-	self withRulerNamed: #gutterDiff
-]
-
-{ #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withTextSegmentIcons [
 	self withRulerNamed: #textSegmentIcons
-]
-
-{ #category : 'accessing - rulers' }
-RubScrolledTextMorph >> gutterDiffRuler [
-	^ self rulerNamed: #gutterDiff
 ]
 
 { #category : 'accessing - rulers' }
@@ -1417,6 +1417,11 @@ RubScrolledTextMorph >> withoutGhostText [
 ]
 
 { #category : 'accessing - rulers' }
+RubScrolledTextMorph >> withoutGutterDiff [
+	self withoutRulerNamed: #gutterDiff
+]
+
+{ #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withoutLineNumbers [
 	self withoutRulerNamed: #lineNumbers
 ]
@@ -1451,11 +1456,6 @@ RubScrolledTextMorph >> withoutSelectionBar [
 { #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withoutTextField [
 	self withoutRulerNamed: #textField
-]
-
-{ #category : 'accessing - rulers' }
-RubScrolledTextMorph >> withoutGutterDiff [
-	self withoutRulerNamed: #gutterDiff
 ]
 
 { #category : 'accessing - rulers' }

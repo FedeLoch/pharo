@@ -22,18 +22,18 @@ RubMethodBaselineProvider >> baselineForMethod: aCompiledMethod [
 ]
 
 { #category : 'accessing' }
+RubMethodBaselineProvider >> baselineForMethod: aCompiledMethod ifNil: aBlock [
+	| result |
+	result := self baselineForMethod: aCompiledMethod.
+	^ result ifNil: aBlock
+]
+
+{ #category : 'accessing' }
 RubMethodBaselineProvider >> baselineForMethod: aCompiledMethod ifNone: aBlock [
 	^ self baselineForMethod: aCompiledMethod
 		ifNil: [ fallbackProvider
 			ifNotNil: [ fallbackProvider baselineForMethod: aCompiledMethod ifNone: aBlock ]
 			ifNil: aBlock ]
-]
-
-{ #category : 'accessing' }
-RubMethodBaselineProvider >> baselineForMethod: aCompiledMethod ifNil: aBlock [
-	| result |
-	result := self baselineForMethod: aCompiledMethod.
-	^ result ifNil: aBlock
 ]
 
 { #category : 'accessing' }

@@ -16,23 +16,20 @@ Class {
 
 { #category : 'accessing' }
 RubGitMethodBaselineProvider >> baselineForMethod: aCompiledMethod [
-	| repoClass repository packageName |
+	| repoClass repositories |
 	repoClass := Smalltalk classNamed: 'IceRepository'.
 	repoClass ifNil: [ ^ nil ].
-	packageName := aCompiledMethod package name.
-	repository := repoClass repositoryForPackageNamed: packageName.
-	repository ifNil: [ ^ nil ].
-	^ self committedSourceFor: aCompiledMethod in: repository
+	repositories := aCompiledMethod package repositories.
+	(repositories size ~= 1) ifTrue: [ ^ nil ].
+	^ self committedSourceFor: aCompiledMethod in: repositories first
 ]
 
 { #category : 'private' }
 RubGitMethodBaselineProvider >> committedSourceFor: aCompiledMethod in: aRepository [
-	| history commit entry |
-	history := aRepository history.
-	history ifNil: [ ^ nil ].
-	commit := history last.
-	commit ifNil: [ ^ nil ].
-	entry := commit entryFor: aCompiledMethod.
-	entry ifNil: [ ^ nil ].
-	^ entry sourceText
+	| commit entry package snapshot methodDefinition |
+	package := aRepository workingCopy packages detect: [ :e | e name = aCompiledMethod package name ].
+	snapshot := aRepository workingCopy snapshotForPackage: package.
+	methodDefinition := snapshot definitions detect: [ :e | e isMethodDefinition and: [ e selector = aCompiledMethod selector and: [ e className = aCompiledMethod methodClass name ] ] ].	
+
+	^ methodDefinition source
 ]

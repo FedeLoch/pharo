@@ -34,6 +34,16 @@ RubGutterDiffPreviewMorph class >> forLine: lineIndex baseline: baselineString c
 		yourself
 ]
 
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> baselineText [
+	^ baselineText
+]
+
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> baselineText: aString [
+	baselineText := aString
+]
+
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
 	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent |
@@ -70,6 +80,16 @@ RubGutterDiffPreviewMorph >> contextLines [
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> contextLines: anInteger [
 	contextLines := anInteger
+]
+
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> currentText [
+	^ currentText
+]
+
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> currentText: aString [
+	currentText := aString
 ]
 
 { #category : 'private' }
@@ -116,24 +136,4 @@ RubGutterDiffPreviewMorph >> lineIndex [
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> lineIndex: anInteger [
 	lineIndex := anInteger
-]
-
-{ #category : 'accessing' }
-RubGutterDiffPreviewMorph >> baselineText [
-	^ baselineText
-]
-
-{ #category : 'accessing' }
-RubGutterDiffPreviewMorph >> baselineText: aString [
-	baselineText := aString
-]
-
-{ #category : 'accessing' }
-RubGutterDiffPreviewMorph >> currentText [
-	^ currentText
-]
-
-{ #category : 'accessing' }
-RubGutterDiffPreviewMorph >> currentText: aString [
-	currentText := aString
 ]

@@ -84,11 +84,6 @@ RubGutterDiffDisplayer >> computeLineStates [
 		ifRemove: [ :xElement | "skip" ]
 ]
 
-{ #category : 'accessing' }
-RubGutterDiffDisplayer >> lineStates [
-	^ lineStates
-]
-
 { #category : 'geometry' }
 RubGutterDiffDisplayer >> computedWidthFrom: aRectangle [
 	^ (self indicatorWidth + self horizontalGapBefore + self horizontalGapAfter + self verticalSeparatorWidth) truncated
@@ -175,6 +170,16 @@ RubGutterDiffDisplayer >> editingMethod: aCompiledMethod [
 	editingMethod := aCompiledMethod
 ]
 
+{ #category : 'private' }
+RubGutterDiffDisplayer >> forwardMouseEventToTextArea: anEvent [
+	| lineIndex line |
+	lineIndex := self lineIndexForPoint: anEvent position.
+	lineIndex > (self lines size) ifTrue: [ ^ self ].
+	line := self lines at: lineIndex.
+	anEvent setPosition: line topLeft.
+	self textArea mouseDown: anEvent
+]
+
 { #category : 'event handling' }
 RubGutterDiffDisplayer >> handlesMouseDown: evt [
 	^ true
@@ -200,6 +205,11 @@ RubGutterDiffDisplayer >> level [
 	^ 3
 ]
 
+{ #category : 'accessing' }
+RubGutterDiffDisplayer >> lineStates [
+	^ lineStates
+]
+
 { #category : 'event handling' }
 RubGutterDiffDisplayer >> mouseDown: anEvent [
 	| lineIndex state |
@@ -222,16 +232,6 @@ RubGutterDiffDisplayer >> mouseMove: anEvent [
 { #category : 'event handling' }
 RubGutterDiffDisplayer >> mouseUp: anEvent [
 	self forwardMouseEventToTextArea: anEvent
-]
-
-{ #category : 'private' }
-RubGutterDiffDisplayer >> forwardMouseEventToTextArea: anEvent [
-	| lineIndex line |
-	lineIndex := self lineIndexForPoint: anEvent position.
-	lineIndex > (self lines size) ifTrue: [ ^ self ].
-	line := self lines at: lineIndex.
-	anEvent setPosition: line topLeft.
-	self textArea mouseDown: anEvent
 ]
 
 { #category : 'accessing' }
