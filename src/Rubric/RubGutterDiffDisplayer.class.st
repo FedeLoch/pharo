@@ -128,7 +128,11 @@ RubGutterDiffDisplayer >> computeLineStates [
 
 	"Phase 5: Extra baseline lines → #removed (only if unmatched by LCS)"
 	common + 1 to: baselineLines size do: [ :i |
-		(matchedX at: i) = 0 ifTrue: [ removedPositions add: i ] ]
+		(matchedX at: i) = 0 ifTrue: [ removedPositions add: i ] ].
+
+	"Phase 6: Collapse consecutive removed positions — only keep the first of each run"
+	removedPositions := removedPositions reject: [ :pos |
+		removedPositions includes: pos - 1 ]
 ]
 
 { #category : 'geometry' }

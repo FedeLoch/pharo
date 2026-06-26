@@ -125,7 +125,7 @@ RubGutterDiffDisplayerTest >> testLinesRemovedAtEnd [
 	self
 		assert: ruler lineStates
 		equals: #(#unchanged) asArray.
-	self assert: ruler removedPositions asArray equals: #(2 3)
+	self assert: ruler removedPositions asArray equals: #(2)
 ]
 
 { #category : 'tests' }
@@ -166,7 +166,7 @@ e'.
 	morph setTextWith: 'a
 b'.
 	ruler computeLineStates.
-	self assert: ruler removedPositions asArray equals: #(3 4 5)
+	self assert: ruler removedPositions asArray equals: #(3)
 ]
 
 { #category : 'tests' }
@@ -218,7 +218,25 @@ e'.
 	self
 		assert: ruler lineStates
 		equals: #(#unchanged #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions asArray equals: #(2 3)
+	self assert: ruler removedPositions asArray equals: #(2)
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testNonConsecutiveRemovalsKeepSeparateArrows [
+	"Non-adjacent deletions each keep their own arrow (not collapsed)"
+	ruler baseline: 'a
+b
+c
+d
+e'.
+	morph setTextWith: 'a
+c
+e'.
+	ruler computeLineStates.
+	self
+		assert: ruler lineStates
+		equals: #(#unchanged #unchanged #unchanged) asArray.
+	self assert: ruler removedPositions asArray equals: #(2 4)
 ]
 
 { #category : 'tests' }
