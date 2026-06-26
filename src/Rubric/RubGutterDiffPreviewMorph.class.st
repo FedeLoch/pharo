@@ -49,7 +49,7 @@ RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder patchText themeColors lineCount maxHeight popupWidth popupHeight |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder patchText themeColors lines lineCount longestLine maxHeight popupWidth popupHeight |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -66,14 +66,16 @@ RubGutterDiffPreviewMorph >> buildDiff [
 				self writeLine: string withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
 			ifRemove: [ :string |
 				self writeLine: string withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
-	popupWidth := previewWidth ifNil: [ 500 ].
-	lineCount := patchText asString lineCount.
+	lines := patchText asString lines.
+	lineCount := lines size.
+	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
+	popupWidth := ((longestLine * 8 + 70) min: previewWidth) max: 200.
 	maxHeight := self world ifNotNil: [ :w | w height * 0.6 ] ifNil: [ 400 ].
 	popupHeight := ((lineCount * 14 + 30) min: maxHeight) max: 100.
 	diffMorph := RubScrolledTextMorph new
 		extent: popupWidth @ popupHeight;
 		setText: patchText;
-		beWrapped;
+		beNotWrapped;
 		withLineNumbers;
 		yourself.
 	self
