@@ -72,7 +72,7 @@ RubGutterDiffDisplayer >> colorForState: aSymbol [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> computeLineStates [
-	| currentText currentLines baselineLines builder yLines xLines matchedY matchedX common uc ub numPairs |
+	| currentText currentLines baselineLines builder yLines xLines matchedY matchedX common |
 	baseline ifNil: [ ^ self ].
 	self textArea ifNil: [ ^ self ].
 	currentText := self textArea text asString.
@@ -96,31 +96,19 @@ RubGutterDiffDisplayer >> computeLineStates [
 					matchedY at: yi put: xj.
 					matchedX at: xj put: yi ] ] ] ].
 
-	"Phase 2: Collect unmatched current/baseline positions within the common range"
+	"Phase 2: Direct classification of each differing position within the common range"
 	common := baselineLines size min: currentLines size.
-	uc := OrderedCollection new.
-	ub := OrderedCollection new.
 	1 to: common do: [ :i |
 		(baselineLines at: i) ~= (currentLines at: i) ifTrue: [
-			(matchedY at: i) = 0 ifTrue: [ uc add: i ].
-			(matchedX at: i) = 0 ifTrue: [ ub add: i ] ] ].
-
-	"Phase 3: Pair unmatched currents with unmatched baselines in reverse order.
-	Reverse-order pairing produces correct results when insertions shift subsequent
-	modifications forward: the last unmatched current pairs with the last unmatched
-	baseline. Excess currents (first unpaired) are true insertions → #added.
-	Excess baselines (first unpaired) are true deletions → #removed."
-	numPairs := uc size min: ub size.
-	numPairs > 0 ifTrue: [
-		1 to: numPairs do: [ :k |
-			| yi xi |
-			yi := uc at: uc size - numPairs + k.
-			xi := ub at: ub size - numPairs + k.
-			lineStates at: yi put: #modified ] ].
-	1 to: uc size - numPairs do: [ :k |
-		lineStates at: (uc at: k) put: #added ].
-	1 to: ub size - numPairs do: [ :k |
-		removedPositions add: (ub at: k) ].
+			(matchedY at: i) = 0
+				ifTrue: [
+					"Current line is unmatched by LCS"
+					(matchedX at: i) = 0
+						ifTrue: [ lineStates at: i put: #modified ]
+						ifFalse: [ lineStates at: i put: #added ] ]
+				ifFalse: [
+					"Current line matched elsewhere (shifted in). Old content gone."
+					(matchedX at: i) = 0 ifTrue: [ removedPositions add: i ] ] ] ].
 
 	"Phase 4: Extra current lines → #added (only if unmatched by LCS)"
 	common + 1 to: currentLines size do: [ :i |

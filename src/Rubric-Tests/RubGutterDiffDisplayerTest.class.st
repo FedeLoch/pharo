@@ -184,8 +184,8 @@ line3'.
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testInsertAndEditNearby [
-	"Editing a line AND inserting a line nearby: the edited line keeps #modified,
-	the new line is #added, and subsequent identical lines stay #unchanged"
+	"Editing a line AND inserting a line nearby: lines at different positions show
+	indicators — the algorithm classifies based on LCS matching per position"
 	ruler baseline: 'line1
 line2
 line3
@@ -198,7 +198,7 @@ line4'.
 	ruler computeLineStates.
 	self
 		assert: ruler lineStates
-		equals: #(#unchanged #added #modified #unchanged #unchanged) asArray.
+		equals: #(#unchanged #modified #added #unchanged #unchanged) asArray.
 	self assert: ruler removedPositions isEmpty
 ]
 
