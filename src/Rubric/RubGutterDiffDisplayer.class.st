@@ -352,7 +352,7 @@ RubGutterDiffDisplayer >> showPreviewAtRemovedPosition: pos atY: textY [
 RubGutterDiffDisplayer >> tryShowPreviewForRemovalAt: aPoint [
 	| textY result |
 	lineStates ifNil: [ ^ false ].
-	textY := aPoint y + self offset y.
+	textY := aPoint y + self offset y - self bounds top.
 	result := self findRemovalGapNearY: textY.
 	result ifNil: [ ^ false ].
 	self showPreviewAtRemovedPosition: result first atY: result second.
