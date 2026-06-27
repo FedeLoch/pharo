@@ -294,6 +294,54 @@ RubGutterDiffDisplayer >> forwardMouseEventToTextArea: anEvent [
 	self textArea mouseDown: anEvent
 ]
 
+{ #category : 'private' }
+RubGutterDiffDisplayer >> findRemovalGapNearY: textY [
+	"Return the removed position whose gap is closest to textY, or nil if none is close enough."
+	self consolidatedRemovedPositions do: [ :pos |
+		(self gapYForPosition: pos lines: self lines)
+			ifNotNil: [ :gapY |
+				(textY - gapY) abs <= self indicatorWidth ifTrue: [ ^ { pos. gapY } ] ] ].
+	^ nil
+]
+
+{ #category : 'event handling' }
+RubGutterDiffDisplayer >> showPreviewAtRemovedPosition: pos atY: textY [
+	| currentText preview previewWidth worldBounds previewPos |
+	previewMorph ifNotNil: [
+		previewMorph delete.
+		previewMorph := nil ].
+	currentText := self textArea text asString.
+	previewWidth := self textArea width.
+	preview := RubGutterDiffPreviewMorph
+		forLine: pos
+		baseline: (baseline ifNil: [ currentText ])
+		current: currentText
+		context: 3
+		width: previewWidth.
+	preview openInWorld.
+	worldBounds := self world ifNotNil: [ :w | w bounds ] ifNil: [ 0@0 corner: 2000@2000 ].
+	previewPos := (self bounds right + 5) @ (textY - self offset y + self bounds top - (preview height // 2)).
+	(previewPos x + preview width) > worldBounds right ifTrue: [
+		previewPos := (worldBounds right - preview width - 5) @ previewPos y ].
+	(previewPos y + preview height) > worldBounds bottom ifTrue: [
+		previewPos := previewPos x @ (worldBounds bottom - preview height - 5) ].
+	previewPos y < worldBounds top ifTrue: [
+		previewPos := previewPos x @ worldBounds top ].
+	preview position: previewPos.
+	previewMorph := preview
+]
+
+{ #category : 'event handling' }
+RubGutterDiffDisplayer >> tryShowPreviewForRemovalAt: aPoint [
+	| textY result |
+	lineStates ifNil: [ ^ false ].
+	textY := aPoint y + self offset y.
+	result := self findRemovalGapNearY: textY.
+	result ifNil: [ ^ false ].
+	self showPreviewAtRemovedPosition: result first atY: result second.
+	^ true
+]
+
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> gapYForPosition: pos lines: lines [
 	"Return the Y coordinate in TEXT space where a removal arrow should be drawn.
@@ -350,6 +398,7 @@ RubGutterDiffDisplayer >> mouseDown: anEvent [
 	lineStates ifNil: [ ^ self ].
 	lineIndex := self lineIndexForPoint: anEvent position.
 	lineIndex > lineStates size ifTrue: [ ^ self ].
+	(self tryShowPreviewForRemovalAt: anEvent position) ifTrue: [ ^ self ].
 	state := lineStates at: lineIndex.
 	state = #unchanged ifTrue: [
 		^ self forwardMouseEventToTextArea: anEvent ].

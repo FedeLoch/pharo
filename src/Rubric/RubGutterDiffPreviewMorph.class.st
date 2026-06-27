@@ -49,7 +49,7 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight targetPatchLine |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -59,9 +59,14 @@ RubGutterDiffPreviewMorph >> buildDiff [
 	builder := TextDiffBuilder from: contextBaseline to: contextCurrent.
 	rawPairs := builder buildPatchSequence.
 	blocks := self segmentIntoBlocks: rawPairs.
+	targetPatchLine := self
+		computeTargetPatchLineFromBlocks: blocks
+		startIdx: startIdx
+		lineIndex: lineIndex.
 	themeColors := UITheme current.
 	patchText := Text streamContents: [ :stream |
 		blocks do: [ :block | self writeBlock: block withTheme: themeColors on: stream ] ].
+	patchText size > 0 ifTrue: [ patchText := patchText copyFrom: 1 to: patchText size - 1 ].
 	lines := patchText asString lines.
 	lineCount := lines size.
 	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
@@ -74,6 +79,11 @@ RubGutterDiffPreviewMorph >> buildDiff [
 		beNotWrapped;
 		withLineNumbers;
 		yourself.
+	targetPatchLine ifNotNil: [
+		| textLines |
+		textLines := diffMorph paragraph lines.
+		targetPatchLine <= textLines size ifTrue: [
+			diffMorph scrollPane scrollToShow: ((textLines at: targetPatchLine) rectangle) ] ].
 	self
 		changeProportionalLayout;
 		addMorph: diffMorph
@@ -170,6 +180,32 @@ RubGutterDiffPreviewMorph >> openInWorld [
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 	previewWidth := anInteger
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> computeTargetPatchLineFromBlocks: blocks startIdx: startIdx lineIndex: lineIndex [
+	"Walk through diff blocks and find the patch text line number
+	corresponding to the clicked line at lineIndex in the current text.
+	For non-match blocks (changes), scroll to the first line of the block
+	so both old and new content of a modification are visible together."
+	| clickedContextPos currentLinesSeen patchLines |
+	clickedContextPos := lineIndex - startIdx + 1.
+	currentLinesSeen := 0.
+	patchLines := 0.
+	blocks do: [ :block |
+		(block first key = #match) ifTrue: [
+			patchLines := patchLines + 1.
+			currentLinesSeen := currentLinesSeen + 1.
+			currentLinesSeen >= clickedContextPos ifTrue: [ ^ patchLines ]
+		] ifFalse: [
+			| blockStart |
+			blockStart := patchLines + 1.
+			block do: [ :pair |
+				patchLines := patchLines + 1.
+				pair key = #remove ifFalse: [
+					currentLinesSeen := currentLinesSeen + 1.
+					currentLinesSeen >= clickedContextPos ifTrue: [ ^ blockStart ] ] ] ] ].
+	^ nil
 ]
 
 { #category : 'private' }
