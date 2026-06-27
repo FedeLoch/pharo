@@ -1,7 +1,10 @@
 "
-Unified inline diff preview (GitHub-style). Removed lines have a red background,
-added lines a green background, matching DiffMorph's theme colors.
-Consecutive same-type changes are merged into single blocks.
+Unified inline diff preview like DiffMorph but inline (not side-by-side).
+Removed lines have a red background, added lines a green background.
+For modifications (both old and new content at the same position),
+InlineTextDiffBuilder gives per-token highlighting: matched tokens use
+the line-level color, changed tokens use a stronger alpha.
+Consecutive same-type lines are merged into blocks.
 Removals appear before additions at the same position.
 
 Dismissal: click outside the popup, click in the method editor, or press Escape.
@@ -46,7 +49,7 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder pairs themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -54,18 +57,11 @@ RubGutterDiffPreviewMorph >> buildDiff [
 	contextBaseline := self extractContextFromLines: baselineLines start: startIdx end: endIdx.
 	contextCurrent := self extractContextFromLines: currentLines start: startIdx end: endIdx.
 	builder := TextDiffBuilder from: contextBaseline to: contextCurrent.
-	pairs := OrderedCollection new.
-	builder
-		patchSequenceDoIfMatch: [ :s | pairs add: #match -> s ]
-		ifInsert: [ :s | pairs add: #insert -> s ]
-		ifRemove: [ :s | pairs add: #remove -> s ].
-	pairs := self reorderPatchPairs: pairs.
+	rawPairs := builder buildPatchSequence.
+	blocks := self segmentIntoBlocks: rawPairs.
 	themeColors := UITheme current.
 	patchText := Text streamContents: [ :stream |
-		pairs do: [ :pair |
-			pair key = #match ifTrue: [ self writeLine: pair value withBackground: nil on: stream ].
-			pair key = #insert ifTrue: [ self writeLine: pair value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ].
-			pair key = #remove ifTrue: [ self writeLine: pair value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ] ].
+		blocks do: [ :block | self writeBlock: block withTheme: themeColors on: stream ] ].
 	lines := patchText asString lines.
 	lineCount := lines size.
 	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
@@ -90,6 +86,95 @@ RubGutterDiffPreviewMorph >> buildDiff [
 		color: Color white;
 		borderWidth: 1;
 		borderColor: Color gray
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> segmentIntoBlocks: pairs [
+	| blocks currentBlock |
+	blocks := OrderedCollection new.
+	currentBlock := nil.
+	pairs do: [ :pair |
+		pair key = #match ifTrue: [
+			currentBlock ifNotNil: [
+				blocks add: currentBlock asArray.
+				currentBlock := nil ].
+			blocks add: { pair } ].
+		pair key ~= #match ifTrue: [
+			currentBlock ifNil: [ currentBlock := OrderedCollection new ].
+			currentBlock add: pair ] ].
+	currentBlock ifNotNil: [ blocks add: currentBlock asArray ].
+	^ blocks asArray
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> writeBlock: block withTheme: themeColors on: stream [
+	block first key = #match ifTrue: [
+		^ self writeLine: block first value withBackground: nil on: stream ].
+	(block anySatisfy: [ :p | p key = #remove ]) ifTrue: [
+		(block anySatisfy: [ :p | p key = #insert ]) ifTrue: [
+			^ self writeModificationBlock: block withTheme: themeColors on: stream ].
+		^ block do: [ :p |
+			self writeLine: p value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
+	block do: [ :p |
+		self writeLine: p value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColors on: stream [
+	| removes inserts i |
+	removes := block select: [ :p | p key = #remove ].
+	inserts := block select: [ :p | p key = #insert ].
+	i := 1.
+	removes do: [ :removePair |
+		i <= inserts size
+			ifTrue: [
+				| oldLine newLine |
+				oldLine := removePair value.
+				newLine := (inserts at: i) value.
+				self
+					writeTokenDiff: oldLine
+					against: newLine
+					forSide: #remove
+					background: themeColors diffRemovedLinesBackgroundColor
+					highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
+					on: stream.
+				self
+					writeTokenDiff: newLine
+					against: oldLine
+					forSide: #insert
+					background: themeColors diffAdditionalLineBackgroundColor
+					highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
+					on: stream.
+				i := i + 1 ]
+			ifFalse: [
+				self writeLine: removePair value
+					withBackground: themeColors diffRemovedLinesBackgroundColor
+					on: stream ] ].
+	i to: inserts size do: [ :j |
+		self writeLine: (inserts at: j) value
+			withBackground: themeColors diffAdditionalLineBackgroundColor
+			on: stream ]
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> writeTokenDiff: lineString against: otherString forSide: sideSymbol background: bgColor highlight: hlColor on: stream [
+	| diffs groups |
+	diffs := (InlineTextDiffBuilder from: lineString to: otherString) buildPatchSequence.
+	groups := diffs groupByRuns: [ :e | e key ].
+	groups do: [ :group |
+		| groupKey |
+		groupKey := group first key.
+		groupKey = #match ifTrue: [
+			group do: [ :each |
+				stream
+					withAttributes: { TextBackgroundColor color: bgColor }
+					do: [ stream nextPutAll: each value ] ] ].
+		groupKey = sideSymbol ifTrue: [
+			group do: [ :each |
+				stream
+					withAttributes: { TextBackgroundColor color: hlColor }
+					do: [ stream nextPutAll: each value ] ] ] ].
+	stream cr
 ]
 
 { #category : 'accessing' }
@@ -174,31 +259,6 @@ RubGutterDiffPreviewMorph >> openInWorld [
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 	previewWidth := anInteger
-]
-
-{ #category : 'private' }
-RubGutterDiffPreviewMorph >> reorderPatchPairs: pairs [
-	| result i |
-	result := OrderedCollection new.
-	i := 1.
-	[i <= pairs size] whileTrue: [
-		| pair |
-		pair := pairs at: i.
-		((pair key = #insert) and: [
-			(i < pairs size) and: [ (pairs at: i + 1) key = #remove ] ]) ifTrue: [
-				"Swap: output remove first, then insert (GitHub-style unified diff)"
-				result add: (pairs at: i + 1).
-				result add: pair.
-				i := i + 2 ] ifFalse: [
-				"Merging: if same type as previous, concatenate"
-				result isEmpty ifTrue: [ result add: pair ] ifFalse: [
-					| last |
-					last := result last.
-					last key = pair key
-						ifTrue: [ result at: result size put: (last key -> (last value, String cr, pair value)) ]
-						ifFalse: [ result add: pair ] ].
-				i := i + 1 ] ].
-	^ result
 ]
 
 { #category : 'private' }
