@@ -44,14 +44,9 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 	baselineText := aString
 ]
 
-{ #category : 'accessing' }
-RubGutterDiffPreviewMorph >> previewWidth: anInteger [
-	previewWidth := anInteger
-]
-
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder pairs themeColors lines lineCount longestLine maxHeight popupWidth popupHeight |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder pairs themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -133,6 +128,54 @@ RubGutterDiffPreviewMorph >> extractContextFromLines: lines start: startIdx end:
 			i < endIdx ifTrue: [ stream cr ] ] ]
 ]
 
+{ #category : 'event handling' }
+RubGutterDiffPreviewMorph >> handleListenEvent: anEvent [
+	anEvent isMouseDown ifTrue: [
+		(self bounds containsPoint: anEvent position) ifFalse: [
+			self delete ] ]
+]
+
+{ #category : 'testing' }
+RubGutterDiffPreviewMorph >> handlesKeyboard: evt [
+	^ true
+]
+
+{ #category : 'initialization' }
+RubGutterDiffPreviewMorph >> initialize [
+	super initialize.
+	self clipSubmorphs: true.
+	contextLines := 3
+]
+
+{ #category : 'event handling' }
+RubGutterDiffPreviewMorph >> keyDown: anEvent [
+	anEvent keyCharacter = Character escape ifTrue: [
+		self delete.
+		^ true ].
+	^ super keyDown: anEvent
+]
+
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> lineIndex [
+	^ lineIndex
+]
+
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> lineIndex: anInteger [
+	lineIndex := anInteger
+]
+
+{ #category : 'opening' }
+RubGutterDiffPreviewMorph >> openInWorld [
+	super openInWorld.
+	self activeHand addEventListener: self
+]
+
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> previewWidth: anInteger [
+	previewWidth := anInteger
+]
+
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> reorderPatchPairs: pairs [
 	| result i |
@@ -141,8 +184,8 @@ RubGutterDiffPreviewMorph >> reorderPatchPairs: pairs [
 	[i <= pairs size] whileTrue: [
 		| pair |
 		pair := pairs at: i.
-		pair key = #insert and: [
-			i < pairs size and: [ (pairs at: i + 1) key = #remove ] ] ifTrue: [
+		((pair key = #insert) and: [
+			(i < pairs size) and: [ (pairs at: i + 1) key = #remove ] ]) ifTrue: [
 				"Swap: output remove first, then insert (GitHub-style unified diff)"
 				result add: (pairs at: i + 1).
 				result add: pair.
@@ -169,47 +212,4 @@ RubGutterDiffPreviewMorph >> writeLine: aString withBackground: aColor on: strea
 		do: [
 			stream nextPutAll: aString.
 			(aString notEmpty and: [ aString last = Character cr ]) ifFalse: [ stream cr ] ]
-]
-
-{ #category : 'testing' }
-RubGutterDiffPreviewMorph >> handlesKeyboard: evt [
-	^ true
-]
-
-{ #category : 'event handling' }
-RubGutterDiffPreviewMorph >> handleListenEvent: anEvent [
-	anEvent isMouseDown ifTrue: [
-		(self bounds containsPoint: anEvent position) ifFalse: [
-			self delete ] ]
-]
-
-{ #category : 'initialization' }
-RubGutterDiffPreviewMorph >> initialize [
-	super initialize.
-	self clipSubmorphs: true.
-	contextLines := 3
-]
-
-{ #category : 'event handling' }
-RubGutterDiffPreviewMorph >> keyDown: anEvent [
-	anEvent keyCharacter = Character escape ifTrue: [
-		self delete.
-		^ true ].
-	^ super keyDown: anEvent
-]
-
-{ #category : 'opening' }
-RubGutterDiffPreviewMorph >> openInWorld [
-	super openInWorld.
-	self activeHand addEventListener: self
-]
-
-{ #category : 'accessing' }
-RubGutterDiffPreviewMorph >> lineIndex [
-	^ lineIndex
-]
-
-{ #category : 'accessing' }
-RubGutterDiffPreviewMorph >> lineIndex: anInteger [
-	lineIndex := anInteger
 ]
