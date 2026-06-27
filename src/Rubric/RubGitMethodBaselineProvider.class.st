@@ -26,10 +26,16 @@ RubGitMethodBaselineProvider >> baselineForMethod: aCompiledMethod [
 
 { #category : 'private' }
 RubGitMethodBaselineProvider >> committedSourceFor: aCompiledMethod in: aRepository [
-	| commit entry package snapshot methodDefinition |
-	package := aRepository workingCopy packages detect: [ :e | e name = aCompiledMethod package name ].
-	snapshot := aRepository workingCopy snapshotForPackage: package.
-	methodDefinition := snapshot definitions detect: [ :e | e isMethodDefinition and: [ e selector = aCompiledMethod selector and: [ e className = aCompiledMethod methodClass name ] ] ].	
-
+	| commit snapshot methodDefinition |
+	aRepository head ifNil: [ ^ nil ].
+	commit := aRepository head commit ifNil: [ ^ nil ].
+	snapshot := commit snapshotFor: aCompiledMethod package.
+	snapshot ifNil: [ ^ nil ].
+	methodDefinition := snapshot definitions
+		detect: [ :e |
+			(e isMethodDefinition
+				and: [ e selector = aCompiledMethod selector ])
+				and: [ e className = aCompiledMethod methodClass name ] ]
+		ifNone: [ ^ nil ].
 	^ methodDefinition source
 ]

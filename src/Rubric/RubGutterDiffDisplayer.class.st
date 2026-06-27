@@ -119,22 +119,22 @@ RubGutterDiffDisplayer >> computedWidthFrom: aRectangle [
 ]
 
 { #category : 'drawing' }
-RubGutterDiffDisplayer >> drawIndicatorBarOn: aCanvas forState: aSymbol atLine: line [
+RubGutterDiffDisplayer >> drawIndicatorBarOn: aCanvas forState: aSymbol fromLine: firstLine toLine: lastLine [
 	| indicatorColor indicatorBounds |
 	indicatorColor := self colorForState: aSymbol.
-	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
-		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (firstLine top + 2)
+		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (lastLine bottom - 2).
 	indicatorBounds := indicatorBounds
 		translateBy: 0 @ (self offset y negated + self bounds top).
 	aCanvas fillRectangle: indicatorBounds color: indicatorColor
 ]
 
 { #category : 'drawing' }
-RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol atLine: line [
+RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol fromLine: firstLine toLine: lastLine [
 	| indicatorColor indicatorBounds |
 	indicatorColor := self colorForState: aSymbol.
-	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (line top + 2)
-		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (line bottom - 2).
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (firstLine top + 2)
+		corner: (self bounds left + self horizontalGapBefore + self indicatorWidth) @ (lastLine bottom - 2).
 	indicatorBounds := indicatorBounds
 		translateBy: 0 @ (self offset y negated + self bounds top).
 	aCanvas setShape: indicatorBounds.
@@ -144,7 +144,7 @@ RubGutterDiffDisplayer >> drawIndicatorBarOnAthens: aCanvas forState: aSymbol at
 
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> drawOn: aCanvas [
-	| lines visibleRectangle firstLine lastLine |
+	| lines visibleRectangle firstLine lastLine i |
 
 	super drawOn: aCanvas.
 	self paragraph ifNil: [ ^ self ].
@@ -158,17 +158,27 @@ RubGutterDiffDisplayer >> drawOn: aCanvas [
 			visibleRectangle := clippedCanvas clipRect.
 			firstLine := self lineIndexForPoint: visibleRectangle topLeft.
 			lastLine := self lineIndexForPoint: visibleRectangle bottomRight.
-			firstLine to: ((lastLine min: lineStates size) min: lines size) do: [ :i |
-				(lineStates at: i) = #unchanged ifFalse: [
-					self drawIndicatorBarOn: clippedCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
-			removedPositions do: [ :pos |
+			i := firstLine.
+			[i <= ((lastLine min: lineStates size) min: lines size)] whileTrue: [
+				| state |
+				state := lineStates at: i.
+				state = #unchanged
+					ifTrue: [ i := i + 1 ]
+					ifFalse: [
+						| runStart |
+						runStart := i.
+						[i < lineStates size and: [ (lineStates at: i + 1) = state ]] whileTrue: [ i := i + 1 ].
+						self drawIndicatorBarOn: clippedCanvas forState: state
+							fromLine: (lines at: runStart) toLine: (lines at: i).
+						i := i + 1 ] ].
+			self consolidatedRemovedPositions do: [ :pos |
 				(self gapYForPosition: pos lines: lines)
 					ifNotNil: [ :y | self drawRemovedArrowAtY: y on: clippedCanvas ] ] ]
 ]
 
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
-	| lines visibleRectangle firstLine lastLine |
+	| lines visibleRectangle firstLine lastLine i |
 	super drawOnAthensCanvas: aCanvas.
 	self paragraph ifNil: [ ^ self ].
 	self paragraph lines ifNil: [ ^ self ].
@@ -183,10 +193,20 @@ RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
 			visibleRectangle := aCanvas clipRect.
 			firstLine := self lineIndexForPoint: visibleRectangle topLeft.
 			lastLine := self lineIndexForPoint: visibleRectangle bottomRight.
-			firstLine to: (lastLine min: lineStates size min: lines size) do: [ :i |
-				(lineStates at: i) = #unchanged ifFalse: [
-					self drawIndicatorBarOnAthens: aCanvas forState: (lineStates at: i) atLine: (lines at: i) ] ].
-			removedPositions do: [ :pos |
+			i := firstLine.
+			[i <= ((lastLine min: lineStates size) min: lines size)] whileTrue: [
+				| state |
+				state := lineStates at: i.
+				state = #unchanged
+					ifTrue: [ i := i + 1 ]
+					ifFalse: [
+						| runStart |
+						runStart := i.
+						[i < lineStates size and: [ (lineStates at: i + 1) = state ]] whileTrue: [ i := i + 1 ].
+						self drawIndicatorBarOnAthens: aCanvas forState: state
+							fromLine: (lines at: runStart) toLine: (lines at: i).
+						i := i + 1 ] ].
+			self consolidatedRemovedPositions do: [ :pos |
 				(self gapYForPosition: pos lines: lines)
 					ifNotNil: [ :y | self drawRemovedArrowAtY: y onAthens: aCanvas ] ] ]
 ]
@@ -255,6 +275,13 @@ RubGutterDiffDisplayer >> flushDiffRunSrcStart: srcStart srcEnd: srcEnd dstStart
 		^ self ].
 	dstStart to: dstEnd do: [ :i |
 		lineStates at: i put: #modified ]
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> consolidatedRemovedPositions [
+	removedPositions ifEmpty: [ ^ #() ].
+	^ removedPositions withIndexSelect: [ :pos :idx |
+		idx = 1 or: [ pos ~= (removedPositions at: idx - 1) + 1 ] ]
 ]
 
 { #category : 'private' }
@@ -380,18 +407,27 @@ RubGutterDiffDisplayer >> selectionChanged [
 
 { #category : 'private' }
 RubGutterDiffDisplayer >> showPreviewAtLine: lineIndex [
-	| currentText preview |
+	| currentText preview previewWidth worldBounds previewPos lineRect |
 	previewMorph ifNotNil: [
 		previewMorph delete.
 		previewMorph := nil ].
 	currentText := self textArea text asString.
+	previewWidth := self textArea width.
 	preview := RubGutterDiffPreviewMorph
 		forLine: lineIndex
 		baseline: (baseline ifNil: [ currentText ])
 		current: currentText
-		context: 3.
+		context: 3
+		width: previewWidth.
 	preview openInWorld.
-	preview position: self bounds topRight + (5 @ 0).
+	worldBounds := self world ifNotNil: [ :w | w bounds ] ifNil: [ 0@0 corner: 2000@2000 ].
+	lineRect := self lines at: lineIndex ifAbsent: [ self lines last ].
+	previewPos := (self bounds right + 5) @ (lineRect top - self offset y + self bounds top).
+	(previewPos x + preview width) > worldBounds right ifTrue: [
+		previewPos := (worldBounds right - preview width - 5) @ previewPos y ].
+	(previewPos y + preview height) > worldBounds bottom ifTrue: [
+		previewPos := previewPos x @ (worldBounds bottom - preview height - 5) ].
+	preview position: previewPos.
 	previewMorph := preview
 ]
 
