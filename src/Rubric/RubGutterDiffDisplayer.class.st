@@ -31,7 +31,8 @@ Class {
 		'lineStates',
 		'removedPositions',
 		'previewMorph',
-		'editingMethod'
+		'editingMethod',
+		'hoveredState'
 	],
 	#category : 'Rubric-Editing-Widgets',
 	#package : 'Rubric',
@@ -173,7 +174,18 @@ RubGutterDiffDisplayer >> drawOn: aCanvas [
 						i := i + 1 ] ].
 			self consolidatedRemovedPositions do: [ :pos |
 				(self gapYForPosition: pos lines: lines)
-					ifNotNil: [ :y | self drawRemovedArrowAtY: y on: clippedCanvas ] ] ]
+					ifNotNil: [ :y | self drawRemovedArrowAtY: y on: clippedCanvas ] ].
+			hoveredState ifNotNil: [
+				hoveredState first = #removed
+					ifTrue: [
+						(self gapYForPosition: hoveredState second lines: lines)
+							ifNotNil: [ :y | self drawHoveredRemovedArrowAtY: y on: clippedCanvas ] ]
+					ifFalse: [
+						(hoveredState second between: firstLine and: lastLine) ifTrue: [
+							hoveredState second <= lines size ifTrue: [
+								self drawHoveredIndicatorBarOn: clippedCanvas
+									forState: hoveredState first
+									atLine: (lines at: hoveredState second) ] ] ] ] ]
 ]
 
 { #category : 'drawing' }
@@ -208,7 +220,18 @@ RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
 						i := i + 1 ] ].
 			self consolidatedRemovedPositions do: [ :pos |
 				(self gapYForPosition: pos lines: lines)
-					ifNotNil: [ :y | self drawRemovedArrowAtY: y onAthens: aCanvas ] ] ]
+					ifNotNil: [ :y | self drawRemovedArrowAtY: y onAthens: aCanvas ] ].
+			hoveredState ifNotNil: [
+				hoveredState first = #removed
+					ifTrue: [
+						(self gapYForPosition: hoveredState second lines: lines)
+							ifNotNil: [ :y | self drawHoveredRemovedArrowAtY: y onAthens: aCanvas ] ]
+					ifFalse: [
+						(hoveredState second between: firstLine and: lastLine) ifTrue: [
+							hoveredState second <= lines size ifTrue: [
+								self drawHoveredIndicatorBarOnAthens: aCanvas
+									forState: hoveredState first
+									atLine: (lines at: hoveredState second) ] ] ] ] ]
 ]
 
 { #category : 'drawing' }
@@ -232,6 +255,71 @@ RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord onAthens: aCanvas [
 	| color arrowSize leftX topY botY off |
 	color := self colorForState: #removed.
 	arrowSize := self indicatorWidth.
+	leftX := self bounds left + self horizontalGapBefore.
+	off := self offset y negated + self bounds top.
+	topY := yCoord - (arrowSize // 2) + off.
+	botY := yCoord + (arrowSize // 2) + off.
+	aCanvas setShape: (aCanvas createPath: [ :builder |
+		builder absolute.
+		builder moveTo: leftX @ topY.
+		builder lineTo: (leftX + arrowSize) @ (yCoord + off).
+		builder lineTo: leftX @ botY.
+		builder close ]).
+	aCanvas setPaint: color.
+	aCanvas draw
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredIndicatorBarOn: aCanvas forState: aSymbol atLine: aTextLine [
+	| indicatorColor indicatorBounds hoverWidth |
+	hoveredState ifNil: [ ^ self ].
+	hoverWidth := self indicatorWidth + 4.
+	indicatorColor := (self colorForState: aSymbol) alpha: 0.8.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (aTextLine top + 2)
+		corner: (self bounds left + self horizontalGapBefore + hoverWidth) @ (aTextLine bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas fillRectangle: indicatorBounds color: indicatorColor
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredIndicatorBarOnAthens: aCanvas forState: aSymbol atLine: aTextLine [
+	| indicatorColor indicatorBounds hoverWidth |
+	hoveredState ifNil: [ ^ self ].
+	hoverWidth := self indicatorWidth + 4.
+	indicatorColor := (self colorForState: aSymbol) alpha: 0.8.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (aTextLine top + 2)
+		corner: (self bounds left + self horizontalGapBefore + hoverWidth) @ (aTextLine bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas setShape: indicatorBounds.
+	aCanvas setPaint: indicatorColor.
+	aCanvas draw
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredRemovedArrowAtY: yCoord on: aCanvas [
+	| color arrowSize leftX topY botY off |
+	hoveredState ifNil: [ ^ self ].
+	color := (self colorForState: #removed) alpha: 0.8.
+	arrowSize := self indicatorWidth + 4.
+	leftX := self bounds left + self horizontalGapBefore.
+	off := self offset y negated + self bounds top.
+	topY := yCoord - (arrowSize // 2) + off.
+	botY := yCoord + (arrowSize // 2) + off.
+	aCanvas drawPolygon: {
+		leftX @ topY.
+		(leftX + arrowSize) @ (yCoord + off).
+		leftX @ botY
+	} fillStyle: color
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredRemovedArrowAtY: yCoord onAthens: aCanvas [
+	| color arrowSize leftX topY botY off |
+	hoveredState ifNil: [ ^ self ].
+	color := (self colorForState: #removed) alpha: 0.8.
+	arrowSize := self indicatorWidth + 4.
 	leftX := self bounds left + self horizontalGapBefore.
 	off := self offset y negated + self bounds top.
 	topY := yCoord - (arrowSize // 2) + off.
@@ -359,6 +447,24 @@ RubGutterDiffDisplayer >> tryShowPreviewForRemovalAt: aPoint [
 	^ true
 ]
 
+{ #category : 'private' }
+RubGutterDiffDisplayer >> computeHoveredStateAt: aPoint [
+	| lineIndex state textY |
+	lineStates ifNil: [ ^ nil ].
+	lineIndex := self lineIndexForPoint: aPoint.
+	lineIndex > lineStates size ifTrue: [ ^ nil ].
+	textY := aPoint y + self offset y - self bounds top.
+	(self consolidatedRemovedPositions
+		detect: [ :pos |
+			(self gapYForPosition: pos lines: self lines)
+				ifNotNil: [ :gapY | (textY - gapY) abs <= self indicatorWidth ]
+				ifNil: [ false ] ]
+		ifNone: [ nil ]) ifNotNil: [ :pos | ^ { #removed. pos } ].
+	state := lineStates at: lineIndex.
+	state = #unchanged ifTrue: [ ^ nil ].
+	^ { state. lineIndex }
+]
+
 { #category : 'drawing' }
 RubGutterDiffDisplayer >> gapYForPosition: pos lines: lines [
 	"Return the Y coordinate in TEXT space where a removal arrow should be drawn.
@@ -391,10 +497,21 @@ RubGutterDiffDisplayer >> indicatorWidth [
 	^ 8
 ]
 
+{ #category : 'accessing' }
+RubGutterDiffDisplayer >> hoveredState [
+	^ hoveredState
+]
+
+{ #category : 'accessing' }
+RubGutterDiffDisplayer >> hoveredState: anObject [
+	hoveredState := anObject
+]
+
 { #category : 'initialization' }
 RubGutterDiffDisplayer >> initialize [
 	super initialize.
-	removedPositions := OrderedCollection new
+	removedPositions := OrderedCollection new.
+	hoveredState := nil
 ]
 
 { #category : 'accessing' }
@@ -423,7 +540,18 @@ RubGutterDiffDisplayer >> mouseDown: anEvent [
 ]
 
 { #category : 'event handling' }
+RubGutterDiffDisplayer >> mouseLeave: anEvent [
+	hoveredState := nil.
+	self changed
+]
+
+{ #category : 'event handling' }
 RubGutterDiffDisplayer >> mouseMove: anEvent [
+	| newHoveredState |
+	newHoveredState := self computeHoveredStateAt: anEvent position.
+	newHoveredState ~= hoveredState ifTrue: [
+		hoveredState := newHoveredState.
+		self changed ].
 	self forwardMouseMoveEventToTextArea: anEvent
 ]
 
