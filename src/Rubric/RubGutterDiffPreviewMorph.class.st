@@ -88,95 +88,6 @@ RubGutterDiffPreviewMorph >> buildDiff [
 		borderColor: Color gray
 ]
 
-{ #category : 'private' }
-RubGutterDiffPreviewMorph >> segmentIntoBlocks: pairs [
-	| blocks currentBlock |
-	blocks := OrderedCollection new.
-	currentBlock := nil.
-	pairs do: [ :pair |
-		pair key = #match ifTrue: [
-			currentBlock ifNotNil: [
-				blocks add: currentBlock asArray.
-				currentBlock := nil ].
-			blocks add: { pair } ].
-		pair key ~= #match ifTrue: [
-			currentBlock ifNil: [ currentBlock := OrderedCollection new ].
-			currentBlock add: pair ] ].
-	currentBlock ifNotNil: [ blocks add: currentBlock asArray ].
-	^ blocks asArray
-]
-
-{ #category : 'private' }
-RubGutterDiffPreviewMorph >> writeBlock: block withTheme: themeColors on: stream [
-	block first key = #match ifTrue: [
-		^ self writeLine: block first value withBackground: nil on: stream ].
-	(block anySatisfy: [ :p | p key = #remove ]) ifTrue: [
-		(block anySatisfy: [ :p | p key = #insert ]) ifTrue: [
-			^ self writeModificationBlock: block withTheme: themeColors on: stream ].
-		^ block do: [ :p |
-			self writeLine: p value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
-	block do: [ :p |
-		self writeLine: p value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
-]
-
-{ #category : 'private' }
-RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColors on: stream [
-	| removes inserts i |
-	removes := block select: [ :p | p key = #remove ].
-	inserts := block select: [ :p | p key = #insert ].
-	i := 1.
-	removes do: [ :removePair |
-		i <= inserts size
-			ifTrue: [
-				| oldLine newLine |
-				oldLine := removePair value.
-				newLine := (inserts at: i) value.
-				self
-					writeTokenDiff: oldLine
-					against: newLine
-					forSide: #remove
-					background: themeColors diffRemovedLinesBackgroundColor
-					highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
-					on: stream.
-				self
-					writeTokenDiff: newLine
-					against: oldLine
-					forSide: #insert
-					background: themeColors diffAdditionalLineBackgroundColor
-					highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
-					on: stream.
-				i := i + 1 ]
-			ifFalse: [
-				self writeLine: removePair value
-					withBackground: themeColors diffRemovedLinesBackgroundColor
-					on: stream ] ].
-	i to: inserts size do: [ :j |
-		self writeLine: (inserts at: j) value
-			withBackground: themeColors diffAdditionalLineBackgroundColor
-			on: stream ]
-]
-
-{ #category : 'private' }
-RubGutterDiffPreviewMorph >> writeTokenDiff: lineString against: otherString forSide: sideSymbol background: bgColor highlight: hlColor on: stream [
-	| diffs groups |
-	diffs := (InlineTextDiffBuilder from: lineString to: otherString) buildPatchSequence.
-	groups := diffs groupByRuns: [ :e | e key ].
-	groups do: [ :group |
-		| groupKey |
-		groupKey := group first key.
-		groupKey = #match ifTrue: [
-			group do: [ :each |
-				stream
-					withAttributes: { TextBackgroundColor color: bgColor }
-					do: [ stream nextPutAll: each value ] ] ].
-		groupKey = sideSymbol ifTrue: [
-			group do: [ :each |
-				stream
-					withAttributes: { TextBackgroundColor color: hlColor }
-					do: [ stream nextPutAll: each value ] ] ] ].
-	stream cr
-]
-
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> contextLines [
 	^ contextLines
@@ -262,6 +173,37 @@ RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 ]
 
 { #category : 'private' }
+RubGutterDiffPreviewMorph >> segmentIntoBlocks: pairs [
+	| blocks currentBlock |
+	blocks := OrderedCollection new.
+	currentBlock := nil.
+	pairs do: [ :pair |
+		pair key = #match ifTrue: [
+			currentBlock ifNotNil: [
+				blocks add: currentBlock asArray.
+				currentBlock := nil ].
+			blocks add: { pair } ].
+		pair key ~= #match ifTrue: [
+			currentBlock ifNil: [ currentBlock := OrderedCollection new ].
+			currentBlock add: pair ] ].
+	currentBlock ifNotNil: [ blocks add: currentBlock asArray ].
+	^ blocks asArray
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> writeBlock: block withTheme: themeColors on: stream [
+	block first key = #match ifTrue: [
+		^ self writeLine: block first value withBackground: nil on: stream ].
+	(block anySatisfy: [ :p | p key = #remove ]) ifTrue: [
+		(block anySatisfy: [ :p | p key = #insert ]) ifTrue: [
+			^ self writeModificationBlock: block withTheme: themeColors on: stream ].
+		^ block do: [ :p |
+			self writeLine: p value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
+	block do: [ :p |
+		self writeLine: p value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
+]
+
+{ #category : 'private' }
 RubGutterDiffPreviewMorph >> writeLine: aString withBackground: aColor on: stream [
 	aColor ifNil: [
 		stream nextPutAll: aString.
@@ -272,4 +214,62 @@ RubGutterDiffPreviewMorph >> writeLine: aString withBackground: aColor on: strea
 		do: [
 			stream nextPutAll: aString.
 			(aString notEmpty and: [ aString last = Character cr ]) ifFalse: [ stream cr ] ]
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColors on: stream [
+	| removes inserts i |
+	removes := block select: [ :p | p key = #remove ].
+	inserts := block select: [ :p | p key = #insert ].
+	i := 1.
+	removes do: [ :removePair |
+		i <= inserts size
+			ifTrue: [
+				| oldLine newLine |
+				oldLine := removePair value.
+				newLine := (inserts at: i) value.
+				self
+					writeTokenDiff: oldLine
+					against: newLine
+					forSide: #remove
+					background: themeColors diffRemovedLinesBackgroundColor
+					highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
+					on: stream.
+				self
+					writeTokenDiff: newLine
+					against: oldLine
+					forSide: #insert
+					background: themeColors diffAdditionalLineBackgroundColor
+					highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
+					on: stream.
+				i := i + 1 ]
+			ifFalse: [
+				self writeLine: removePair value
+					withBackground: themeColors diffRemovedLinesBackgroundColor
+					on: stream ] ].
+	i to: inserts size do: [ :j |
+		self writeLine: (inserts at: j) value
+			withBackground: themeColors diffAdditionalLineBackgroundColor
+			on: stream ]
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> writeTokenDiff: lineString against: otherString forSide: sideSymbol background: bgColor highlight: hlColor on: stream [
+	| diffs groups |
+	diffs := (InlineTextDiffBuilder from: lineString to: otherString) buildPatchSequence.
+	groups := diffs groupByRuns: [ :e | e key ].
+	groups do: [ :group |
+		| groupKey |
+		groupKey := group first key.
+		groupKey = #match ifTrue: [
+			group do: [ :each |
+				stream
+					withAttributes: { TextBackgroundColor color: bgColor }
+					do: [ stream nextPutAll: each value ] ] ].
+		groupKey = sideSymbol ifTrue: [
+			group do: [ :each |
+				stream
+					withAttributes: { TextBackgroundColor color: hlColor }
+					do: [ stream nextPutAll: each value ] ] ] ].
+	stream cr
 ]

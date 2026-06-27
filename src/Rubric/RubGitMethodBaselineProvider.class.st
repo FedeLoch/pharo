@@ -33,8 +33,8 @@ RubGitMethodBaselineProvider >> committedSourceFor: aCompiledMethod in: aReposit
 	snapshot ifNil: [ ^ nil ].
 	methodDefinition := snapshot definitions
 		detect: [ :e |
-			e isMethodDefinition
-				and: [ e selector = aCompiledMethod selector ]
+			(e isMethodDefinition
+				and: [ e selector = aCompiledMethod selector ])
 				and: [ e className = aCompiledMethod methodClass name ] ]
 		ifNone: [ ^ nil ].
 	^ methodDefinition source
