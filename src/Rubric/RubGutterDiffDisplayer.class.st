@@ -31,7 +31,8 @@ Class {
 		'lineStates',
 		'removedPositions',
 		'previewMorph',
-		'editingMethod'
+		'editingMethod',
+		'hoveredState'
 	],
 	#category : 'Rubric-Editing-Widgets',
 	#package : 'Rubric',
@@ -173,7 +174,18 @@ RubGutterDiffDisplayer >> drawOn: aCanvas [
 						i := i + 1 ] ].
 			self consolidatedRemovedPositions do: [ :pos |
 				(self gapYForPosition: pos lines: lines)
-					ifNotNil: [ :y | self drawRemovedArrowAtY: y on: clippedCanvas ] ] ]
+					ifNotNil: [ :y | self drawRemovedArrowAtY: y on: clippedCanvas ] ].
+			hoveredState ifNotNil: [
+				hoveredState first = #removed
+					ifTrue: [
+						(self gapYForPosition: hoveredState second lines: lines)
+							ifNotNil: [ :y | self drawHoveredRemovedArrowAtY: y on: clippedCanvas ] ]
+					ifFalse: [
+						(hoveredState second between: firstLine and: lastLine) ifTrue: [
+							hoveredState second <= lines size ifTrue: [
+								self drawHoveredIndicatorBarOn: clippedCanvas
+									forState: hoveredState first
+									atLine: (lines at: hoveredState second) ] ] ] ] ]
 ]
 
 { #category : 'drawing' }
@@ -208,7 +220,18 @@ RubGutterDiffDisplayer >> drawOnAthensCanvas: aCanvas [
 						i := i + 1 ] ].
 			self consolidatedRemovedPositions do: [ :pos |
 				(self gapYForPosition: pos lines: lines)
-					ifNotNil: [ :y | self drawRemovedArrowAtY: y onAthens: aCanvas ] ] ]
+					ifNotNil: [ :y | self drawRemovedArrowAtY: y onAthens: aCanvas ] ].
+			hoveredState ifNotNil: [
+				hoveredState first = #removed
+					ifTrue: [
+						(self gapYForPosition: hoveredState second lines: lines)
+							ifNotNil: [ :y | self drawHoveredRemovedArrowAtY: y onAthens: aCanvas ] ]
+					ifFalse: [
+						(hoveredState second between: firstLine and: lastLine) ifTrue: [
+							hoveredState second <= lines size ifTrue: [
+								self drawHoveredIndicatorBarOnAthens: aCanvas
+									forState: hoveredState first
+									atLine: (lines at: hoveredState second) ] ] ] ] ]
 ]
 
 { #category : 'drawing' }
@@ -232,6 +255,71 @@ RubGutterDiffDisplayer >> drawRemovedArrowAtY: yCoord onAthens: aCanvas [
 	| color arrowSize leftX topY botY off |
 	color := self colorForState: #removed.
 	arrowSize := self indicatorWidth.
+	leftX := self bounds left + self horizontalGapBefore.
+	off := self offset y negated + self bounds top.
+	topY := yCoord - (arrowSize // 2) + off.
+	botY := yCoord + (arrowSize // 2) + off.
+	aCanvas setShape: (aCanvas createPath: [ :builder |
+		builder absolute.
+		builder moveTo: leftX @ topY.
+		builder lineTo: (leftX + arrowSize) @ (yCoord + off).
+		builder lineTo: leftX @ botY.
+		builder close ]).
+	aCanvas setPaint: color.
+	aCanvas draw
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredIndicatorBarOn: aCanvas forState: aSymbol atLine: aTextLine [
+	| indicatorColor indicatorBounds hoverWidth |
+	hoveredState ifNil: [ ^ self ].
+	hoverWidth := self indicatorWidth + 4.
+	indicatorColor := (self colorForState: aSymbol) alpha: 0.8.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (aTextLine top + 2)
+		corner: (self bounds left + self horizontalGapBefore + hoverWidth) @ (aTextLine bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas fillRectangle: indicatorBounds color: indicatorColor
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredIndicatorBarOnAthens: aCanvas forState: aSymbol atLine: aTextLine [
+	| indicatorColor indicatorBounds hoverWidth |
+	hoveredState ifNil: [ ^ self ].
+	hoverWidth := self indicatorWidth + 4.
+	indicatorColor := (self colorForState: aSymbol) alpha: 0.8.
+	indicatorBounds := (self bounds left + self horizontalGapBefore) @ (aTextLine top + 2)
+		corner: (self bounds left + self horizontalGapBefore + hoverWidth) @ (aTextLine bottom - 2).
+	indicatorBounds := indicatorBounds
+		translateBy: 0 @ (self offset y negated + self bounds top).
+	aCanvas setShape: indicatorBounds.
+	aCanvas setPaint: indicatorColor.
+	aCanvas draw
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredRemovedArrowAtY: yCoord on: aCanvas [
+	| color arrowSize leftX topY botY off |
+	hoveredState ifNil: [ ^ self ].
+	color := (self colorForState: #removed) alpha: 0.8.
+	arrowSize := self indicatorWidth + 4.
+	leftX := self bounds left + self horizontalGapBefore.
+	off := self offset y negated + self bounds top.
+	topY := yCoord - (arrowSize // 2) + off.
+	botY := yCoord + (arrowSize // 2) + off.
+	aCanvas drawPolygon: {
+		leftX @ topY.
+		(leftX + arrowSize) @ (yCoord + off).
+		leftX @ botY
+	} fillStyle: color
+]
+
+{ #category : 'drawing' }
+RubGutterDiffDisplayer >> drawHoveredRemovedArrowAtY: yCoord onAthens: aCanvas [
+	| color arrowSize leftX topY botY off |
+	hoveredState ifNil: [ ^ self ].
+	color := (self colorForState: #removed) alpha: 0.8.
+	arrowSize := self indicatorWidth + 4.
 	leftX := self bounds left + self horizontalGapBefore.
 	off := self offset y negated + self bounds top.
 	topY := yCoord - (arrowSize // 2) + off.
@@ -285,13 +373,96 @@ RubGutterDiffDisplayer >> consolidatedRemovedPositions [
 ]
 
 { #category : 'private' }
-RubGutterDiffDisplayer >> forwardMouseEventToTextArea: anEvent [
+RubGutterDiffDisplayer >> adjustEventPosition: anEvent [
 	| lineIndex line |
 	lineIndex := self lineIndexForPoint: anEvent position.
 	lineIndex > (self lines size) ifTrue: [ ^ self ].
 	line := self lines at: lineIndex.
-	anEvent setPosition: line topLeft.
+	anEvent setPosition: line topLeft
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> forwardMouseDownEventToTextArea: anEvent [
+	self adjustEventPosition: anEvent.
 	self textArea mouseDown: anEvent
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> forwardMouseMoveEventToTextArea: anEvent [
+	self adjustEventPosition: anEvent.
+	self textArea mouseMove: anEvent
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> forwardMouseUpEventToTextArea: anEvent [
+	self adjustEventPosition: anEvent.
+	self textArea mouseUp: anEvent
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> findRemovalGapNearY: textY [
+	"Return the removed position whose gap is closest to textY, or nil if none is close enough."
+	self consolidatedRemovedPositions do: [ :pos |
+		(self gapYForPosition: pos lines: self lines)
+			ifNotNil: [ :gapY |
+				(textY - gapY) abs <= self indicatorWidth ifTrue: [ ^ { pos. gapY } ] ] ].
+	^ nil
+]
+
+{ #category : 'event handling' }
+RubGutterDiffDisplayer >> showPreviewAtRemovedPosition: pos atY: textY [
+	| currentText preview previewWidth worldBounds previewPos |
+	previewMorph ifNotNil: [
+		previewMorph delete.
+		previewMorph := nil ].
+	currentText := self textArea text asString.
+	previewWidth := self textArea width.
+	preview := RubGutterDiffPreviewMorph
+		forLine: pos
+		baseline: (baseline ifNil: [ currentText ])
+		current: currentText
+		context: 3
+		width: previewWidth.
+	preview openInWorld.
+	worldBounds := self world ifNotNil: [ :w | w bounds ] ifNil: [ 0@0 corner: 2000@2000 ].
+	previewPos := (self bounds right + 5) @ (textY - self offset y + self bounds top - (preview height // 2)).
+	(previewPos x + preview width) > worldBounds right ifTrue: [
+		previewPos := (worldBounds right - preview width - 5) @ previewPos y ].
+	(previewPos y + preview height) > worldBounds bottom ifTrue: [
+		previewPos := previewPos x @ (worldBounds bottom - preview height - 5) ].
+	previewPos y < worldBounds top ifTrue: [
+		previewPos := previewPos x @ worldBounds top ].
+	preview position: previewPos.
+	previewMorph := preview
+]
+
+{ #category : 'event handling' }
+RubGutterDiffDisplayer >> tryShowPreviewForRemovalAt: aPoint [
+	| textY result |
+	lineStates ifNil: [ ^ false ].
+	textY := aPoint y + self offset y - self bounds top.
+	result := self findRemovalGapNearY: textY.
+	result ifNil: [ ^ false ].
+	self showPreviewAtRemovedPosition: result first atY: result second.
+	^ true
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> computeHoveredStateAt: aPoint [
+	| lineIndex state textY |
+	lineStates ifNil: [ ^ nil ].
+	lineIndex := self lineIndexForPoint: aPoint.
+	lineIndex > lineStates size ifTrue: [ ^ nil ].
+	textY := aPoint y + self offset y - self bounds top.
+	(self consolidatedRemovedPositions
+		detect: [ :pos |
+			(self gapYForPosition: pos lines: self lines)
+				ifNotNil: [ :gapY | (textY - gapY) abs <= self indicatorWidth ]
+				ifNil: [ false ] ]
+		ifNone: [ nil ]) ifNotNil: [ :pos | ^ { #removed. pos } ].
+	state := lineStates at: lineIndex.
+	state = #unchanged ifTrue: [ ^ nil ].
+	^ { state. lineIndex }
 ]
 
 { #category : 'drawing' }
@@ -326,10 +497,21 @@ RubGutterDiffDisplayer >> indicatorWidth [
 	^ 8
 ]
 
+{ #category : 'accessing' }
+RubGutterDiffDisplayer >> hoveredState [
+	^ hoveredState
+]
+
+{ #category : 'accessing' }
+RubGutterDiffDisplayer >> hoveredState: anObject [
+	hoveredState := anObject
+]
+
 { #category : 'initialization' }
 RubGutterDiffDisplayer >> initialize [
 	super initialize.
-	removedPositions := OrderedCollection new
+	removedPositions := OrderedCollection new.
+	hoveredState := nil
 ]
 
 { #category : 'accessing' }
@@ -350,20 +532,32 @@ RubGutterDiffDisplayer >> mouseDown: anEvent [
 	lineStates ifNil: [ ^ self ].
 	lineIndex := self lineIndexForPoint: anEvent position.
 	lineIndex > lineStates size ifTrue: [ ^ self ].
+	(self tryShowPreviewForRemovalAt: anEvent position) ifTrue: [ ^ self ].
 	state := lineStates at: lineIndex.
 	state = #unchanged ifTrue: [
-		^ self forwardMouseEventToTextArea: anEvent ].
+		^ self forwardMouseDownEventToTextArea: anEvent ].
 	self showPreviewAtLine: lineIndex
 ]
 
 { #category : 'event handling' }
+RubGutterDiffDisplayer >> mouseLeave: anEvent [
+	hoveredState := nil.
+	self changed
+]
+
+{ #category : 'event handling' }
 RubGutterDiffDisplayer >> mouseMove: anEvent [
-	self forwardMouseEventToTextArea: anEvent
+	| newHoveredState |
+	newHoveredState := self computeHoveredStateAt: anEvent position.
+	newHoveredState ~= hoveredState ifTrue: [
+		hoveredState := newHoveredState.
+		self changed ].
+	self forwardMouseMoveEventToTextArea: anEvent
 ]
 
 { #category : 'event handling' }
 RubGutterDiffDisplayer >> mouseUp: anEvent [
-	self forwardMouseEventToTextArea: anEvent
+	self forwardMouseUpEventToTextArea: anEvent
 ]
 
 { #category : 'accessing' }

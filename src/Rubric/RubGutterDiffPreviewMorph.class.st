@@ -49,31 +49,40 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight |
-	baselineLines := baselineText lines.
-	currentLines := currentText lines.
-	startIdx := (lineIndex - contextLines) max: 1.
-	endIdx := (lineIndex + contextLines) min: currentLines size.
-	contextBaseline := self extractContextFromLines: baselineLines start: startIdx end: endIdx.
-	contextCurrent := self extractContextFromLines: currentLines start: startIdx end: endIdx.
-	builder := TextDiffBuilder from: contextBaseline to: contextCurrent.
+	| builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight targetPatchLine |
+	builder := TextDiffBuilder from: baselineText to: currentText.
 	rawPairs := builder buildPatchSequence.
 	blocks := self segmentIntoBlocks: rawPairs.
+	targetPatchLine := self
+		computeTargetPatchLineFromBlocks: blocks
+		startIdx: 1
+		lineIndex: lineIndex.
 	themeColors := UITheme current.
 	patchText := Text streamContents: [ :stream |
 		blocks do: [ :block | self writeBlock: block withTheme: themeColors on: stream ] ].
+	patchText size > 0 ifTrue: [ patchText := patchText copyFrom: 1 to: patchText size - 1 ].
 	lines := patchText asString lines.
 	lineCount := lines size.
 	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
 	popupWidth := ((longestLine * 8 + 70) min: previewWidth) max: 200.
 	maxHeight := self world ifNotNil: [ :w | w height * 0.6 ] ifNil: [ 400 ].
-	popupHeight := ((lineCount * 14 + 30) min: maxHeight) max: 100.
+	popupHeight := ((5 min: lineCount) * 14 + 30) min: maxHeight max: 100.
 	diffMorph := RubScrolledTextMorph new
 		extent: popupWidth @ popupHeight;
 		setText: patchText;
 		beNotWrapped;
 		withLineNumbers;
 		yourself.
+	targetPatchLine ifNotNil: [
+		| textLines textLine currentOffset viewportHeight centerY targetY |
+		textLines := diffMorph paragraph lines.
+		targetPatchLine <= textLines size ifTrue: [
+			textLine := textLines at: targetPatchLine.
+			currentOffset := diffMorph scrollPane offset.
+			viewportHeight := diffMorph scrollPane scrollBounds height.
+			centerY := textLine top + (textLine height / 2).
+			targetY := (centerY - (viewportHeight / 2)) max: 0.
+			diffMorph scrollPane scrollBy: 0 @ (currentOffset y - targetY) ] ].
 	self
 		changeProportionalLayout;
 		addMorph: diffMorph
@@ -126,6 +135,7 @@ RubGutterDiffPreviewMorph >> extractContextFromLines: lines start: startIdx end:
 
 { #category : 'event handling' }
 RubGutterDiffPreviewMorph >> handleListenEvent: anEvent [
+	(anEvent isKindOf: MouseButtonEvent) ifFalse: [ ^ self ].
 	anEvent isMouseDown ifTrue: [
 		(self bounds containsPoint: anEvent position) ifFalse: [
 			self delete ] ]
@@ -170,6 +180,32 @@ RubGutterDiffPreviewMorph >> openInWorld [
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 	previewWidth := anInteger
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> computeTargetPatchLineFromBlocks: blocks startIdx: startIdx lineIndex: lineIndex [
+	"Walk through diff blocks and find the patch text line number
+	corresponding to the clicked line at lineIndex in the current text.
+	For non-match blocks (changes), scroll to the first line of the block
+	so both old and new content of a modification are visible together."
+	| clickedContextPos currentLinesSeen patchLines |
+	clickedContextPos := lineIndex - startIdx + 1.
+	currentLinesSeen := 0.
+	patchLines := 0.
+	blocks do: [ :block |
+		(block first key = #match) ifTrue: [
+			patchLines := patchLines + 1.
+			currentLinesSeen := currentLinesSeen + 1.
+			currentLinesSeen >= clickedContextPos ifTrue: [ ^ patchLines ]
+		] ifFalse: [
+			| blockStart |
+			blockStart := patchLines + 1.
+			block do: [ :pair |
+				patchLines := patchLines + 1.
+				pair key = #remove ifFalse: [
+					currentLinesSeen := currentLinesSeen + 1.
+					currentLinesSeen >= clickedContextPos ifTrue: [ ^ blockStart ] ] ] ] ].
+	^ nil
 ]
 
 { #category : 'private' }
