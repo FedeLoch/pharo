@@ -51,7 +51,7 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight btnHeight revertLabel |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight revertBtn |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -69,18 +69,22 @@ RubGutterDiffPreviewMorph >> buildDiff [
 	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
 	popupWidth := ((longestLine * 8 + 70) min: previewWidth) max: 200.
 	maxHeight := self world ifNotNil: [ :w | w height * 0.6 ] ifNil: [ 400 ].
-	popupHeight := ((lineCount * 14 + 30) min: maxHeight - 20) max: 100.
-	btnHeight := 20.
+	popupHeight := ((lineCount * 14 + 30) min: maxHeight) max: 100.
 	diffMorph := RubScrolledTextMorph new
-		extent: popupWidth @ (popupHeight - btnHeight);
+		extent: popupWidth @ popupHeight;
 		setText: patchText;
 		beNotWrapped;
 		withLineNumbers;
 		yourself.
-	revertLabel := (StringMorph new contents: '↩ revert line')
-		color: (Color blue).
-	revertLabel
-		on: #mouseDown send: #revert to: self.
+	revertBtn := IconicButtonMorph new
+		labelGraphic: (self iconFormSetNamed: #smallUpdateIcon) asForm;
+		target: self;
+		actionSelector: #revert;
+		color: Color transparent;
+		borderWidth: 0;
+		helpText: 'Revert changes';
+		extent: 16 @ 16;
+		yourself.
 	self
 		changeProportionalLayout;
 		addMorph: diffMorph
@@ -88,15 +92,18 @@ RubGutterDiffPreviewMorph >> buildDiff [
 			leftOffset: 0;
 			rightOffset: 0;
 			topOffset: 0;
-			bottomOffset: btnHeight negated);
-		addMorph: revertLabel
+			bottomOffset: 0);
+		addMorph: revertBtn
 		fullFrame: (LayoutFrame identity
-			leftOffset: 5;
-			topFraction: 1;
-			topOffset: btnHeight negated;
+			leftFraction: 1;
+			leftOffset: -20;
+			topFraction: 0;
+			topOffset: 4;
 			rightFraction: 1;
-			bottomFraction: 1);
-		extent: popupWidth @ (popupHeight + btnHeight);
+			rightOffset: -4;
+			bottomFraction: 0;
+			bottomOffset: 20);
+		extent: popupWidth @ popupHeight;
 		color: Color white;
 		borderWidth: 1;
 		borderColor: Color gray
