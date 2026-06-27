@@ -74,11 +74,12 @@ RubGutterDiffPreviewMorph >> buildDiff [
 		withLineNumbers;
 		yourself.
 	targetPatchLine ifNotNil: [
-		| textLines textLine |
+		| textLines textLine currentOffset |
 		textLines := diffMorph paragraph lines.
 		targetPatchLine <= textLines size ifTrue: [
 			textLine := textLines at: targetPatchLine.
-			diffMorph scrollPane offset: (diffMorph scrollPane offset x) @ textLine top ] ].
+			currentOffset := diffMorph scrollPane offset.
+			diffMorph scrollPane scrollBy: 0 @ (currentOffset y - textLine top) ] ].
 	self
 		changeProportionalLayout;
 		addMorph: diffMorph
