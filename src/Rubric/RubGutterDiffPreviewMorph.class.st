@@ -136,6 +136,7 @@ RubGutterDiffPreviewMorph >> extractContextFromLines: lines start: startIdx end:
 
 { #category : 'event handling' }
 RubGutterDiffPreviewMorph >> handleListenEvent: anEvent [
+	(anEvent isKindOf: MouseButtonEvent) ifFalse: [ ^ self ].
 	anEvent isMouseDown ifTrue: [
 		(self bounds containsPoint: anEvent position) ifFalse: [
 			self delete ] ]
