@@ -18,7 +18,8 @@ Class {
 		'contextLines',
 		'baselineText',
 		'currentText',
-		'previewWidth'
+		'previewWidth',
+		'editor'
 	],
 	#category : 'Rubric-Editing-Widgets',
 	#package : 'Rubric',
@@ -26,13 +27,14 @@ Class {
 }
 
 { #category : 'instance creation' }
-RubGutterDiffPreviewMorph class >> forLine: lineIndex baseline: baselineString current: currentString context: contextSize width: previewWidth [
+RubGutterDiffPreviewMorph class >> forLine: lineIndex baseline: baselineString current: currentString context: contextSize width: previewWidth editor: anEditor [
 	^ self new
 		lineIndex: lineIndex;
 		baselineText: baselineString;
 		currentText: currentString;
 		contextLines: contextSize;
 		previewWidth: previewWidth;
+		editor: anEditor;
 		buildDiff;
 		yourself
 ]
@@ -49,7 +51,7 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight |
+	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight btnHeight revertLabel |
 	baselineLines := baselineText lines.
 	currentLines := currentText lines.
 	startIdx := (lineIndex - contextLines) max: 1.
@@ -67,22 +69,34 @@ RubGutterDiffPreviewMorph >> buildDiff [
 	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
 	popupWidth := ((longestLine * 8 + 70) min: previewWidth) max: 200.
 	maxHeight := self world ifNotNil: [ :w | w height * 0.6 ] ifNil: [ 400 ].
-	popupHeight := ((lineCount * 14 + 30) min: maxHeight) max: 100.
+	popupHeight := ((lineCount * 14 + 30) min: maxHeight - 20) max: 100.
+	btnHeight := 20.
 	diffMorph := RubScrolledTextMorph new
-		extent: popupWidth @ popupHeight;
+		extent: popupWidth @ (popupHeight - btnHeight);
 		setText: patchText;
 		beNotWrapped;
 		withLineNumbers;
 		yourself.
+	revertLabel := (StringMorph new contents: '↩ revert line')
+		color: (Color blue).
+	revertLabel
+		on: #mouseDown send: #revert to: self.
 	self
 		changeProportionalLayout;
 		addMorph: diffMorph
 		fullFrame: (LayoutFrame identity
-			topOffset: 0;
-			bottomOffset: 0;
 			leftOffset: 0;
-			rightOffset: 0);
-		extent: popupWidth @ popupHeight;
+			rightOffset: 0;
+			topOffset: 0;
+			bottomOffset: btnHeight negated);
+		addMorph: revertLabel
+		fullFrame: (LayoutFrame identity
+			leftOffset: 5;
+			topFraction: 1;
+			topOffset: btnHeight negated;
+			rightFraction: 1;
+			bottomFraction: 1);
+		extent: popupWidth @ (popupHeight + btnHeight);
 		color: Color white;
 		borderWidth: 1;
 		borderColor: Color gray
@@ -96,6 +110,11 @@ RubGutterDiffPreviewMorph >> contextLines [
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> contextLines: anInteger [
 	contextLines := anInteger
+]
+
+{ #category : 'accessing' }
+RubGutterDiffPreviewMorph >> editor: anEditor [
+	editor := anEditor
 ]
 
 { #category : 'accessing' }
@@ -251,6 +270,15 @@ RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColor
 		self writeLine: (inserts at: j) value
 			withBackground: themeColors diffAdditionalLineBackgroundColor
 			on: stream ]
+]
+
+{ #category : 'actions' }
+RubGutterDiffPreviewMorph >> revert [
+	self delete.
+	editor ifNotNil: [
+		editor setText: baselineText asText.
+		editor hasUnacceptedEdits: true.
+		editor acceptContents ]
 ]
 
 { #category : 'private' }

@@ -418,7 +418,8 @@ RubGutterDiffDisplayer >> showPreviewAtLine: lineIndex [
 		baseline: (baseline ifNil: [ currentText ])
 		current: currentText
 		context: 3
-		width: previewWidth.
+		width: previewWidth
+		editor: self owner.
 	preview openInWorld.
 	worldBounds := self world ifNotNil: [ :w | w bounds ] ifNil: [ 0@0 corner: 2000@2000 ].
 	lineRect := self lines at: lineIndex ifAbsent: [ self lines last ].
