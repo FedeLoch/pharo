@@ -236,8 +236,8 @@ RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColor
 					highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
 					on: stream.
 				self
-					writeTokenDiff: newLine
-					against: oldLine
+					writeTokenDiff: oldLine
+					against: newLine
 					forSide: #insert
 					background: themeColors diffAdditionalLineBackgroundColor
 					highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
