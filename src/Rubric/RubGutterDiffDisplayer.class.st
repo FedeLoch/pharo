@@ -285,13 +285,30 @@ RubGutterDiffDisplayer >> consolidatedRemovedPositions [
 ]
 
 { #category : 'private' }
-RubGutterDiffDisplayer >> forwardMouseEventToTextArea: anEvent [
+RubGutterDiffDisplayer >> adjustEventPosition: anEvent [
 	| lineIndex line |
 	lineIndex := self lineIndexForPoint: anEvent position.
 	lineIndex > (self lines size) ifTrue: [ ^ self ].
 	line := self lines at: lineIndex.
-	anEvent setPosition: line topLeft.
+	anEvent setPosition: line topLeft
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> forwardMouseDownEventToTextArea: anEvent [
+	self adjustEventPosition: anEvent.
 	self textArea mouseDown: anEvent
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> forwardMouseMoveEventToTextArea: anEvent [
+	self adjustEventPosition: anEvent.
+	self textArea mouseMove: anEvent
+]
+
+{ #category : 'private' }
+RubGutterDiffDisplayer >> forwardMouseUpEventToTextArea: anEvent [
+	self adjustEventPosition: anEvent.
+	self textArea mouseUp: anEvent
 ]
 
 { #category : 'private' }
@@ -401,18 +418,18 @@ RubGutterDiffDisplayer >> mouseDown: anEvent [
 	(self tryShowPreviewForRemovalAt: anEvent position) ifTrue: [ ^ self ].
 	state := lineStates at: lineIndex.
 	state = #unchanged ifTrue: [
-		^ self forwardMouseEventToTextArea: anEvent ].
+		^ self forwardMouseDownEventToTextArea: anEvent ].
 	self showPreviewAtLine: lineIndex
 ]
 
 { #category : 'event handling' }
 RubGutterDiffDisplayer >> mouseMove: anEvent [
-	self forwardMouseEventToTextArea: anEvent
+	self forwardMouseMoveEventToTextArea: anEvent
 ]
 
 { #category : 'event handling' }
 RubGutterDiffDisplayer >> mouseUp: anEvent [
-	self forwardMouseEventToTextArea: anEvent
+	self forwardMouseUpEventToTextArea: anEvent
 ]
 
 { #category : 'accessing' }
