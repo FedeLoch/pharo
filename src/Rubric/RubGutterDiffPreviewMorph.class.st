@@ -49,19 +49,13 @@ RubGutterDiffPreviewMorph >> baselineText: aString [
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
-	| baselineLines currentLines startIdx endIdx contextBaseline contextCurrent builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight targetPatchLine |
-	baselineLines := baselineText lines.
-	currentLines := currentText lines.
-	startIdx := (lineIndex - contextLines) max: 1.
-	endIdx := (lineIndex + contextLines) min: currentLines size.
-	contextBaseline := self extractContextFromLines: baselineLines start: startIdx end: endIdx.
-	contextCurrent := self extractContextFromLines: currentLines start: startIdx end: endIdx.
-	builder := TextDiffBuilder from: contextBaseline to: contextCurrent.
+	| builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight targetPatchLine |
+	builder := TextDiffBuilder from: baselineText to: currentText.
 	rawPairs := builder buildPatchSequence.
 	blocks := self segmentIntoBlocks: rawPairs.
 	targetPatchLine := self
 		computeTargetPatchLineFromBlocks: blocks
-		startIdx: startIdx
+		startIdx: 1
 		lineIndex: lineIndex.
 	themeColors := UITheme current.
 	patchText := Text streamContents: [ :stream |
