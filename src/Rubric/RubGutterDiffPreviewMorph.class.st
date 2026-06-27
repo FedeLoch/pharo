@@ -66,7 +66,7 @@ RubGutterDiffPreviewMorph >> buildDiff [
 	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
 	popupWidth := ((longestLine * 8 + 70) min: previewWidth) max: 200.
 	maxHeight := self world ifNotNil: [ :w | w height * 0.6 ] ifNil: [ 400 ].
-	popupHeight := ((lineCount * 14 + 30) min: maxHeight) max: 100.
+	popupHeight := ((5 min: lineCount) * 14 + 30) min: maxHeight max: 100.
 	diffMorph := RubScrolledTextMorph new
 		extent: popupWidth @ popupHeight;
 		setText: patchText;
