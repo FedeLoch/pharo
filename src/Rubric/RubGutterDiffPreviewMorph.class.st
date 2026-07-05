@@ -27,6 +27,7 @@ Class {
 
 { #category : 'instance creation' }
 RubGutterDiffPreviewMorph class >> forLine: lineIndex baseline: baselineString current: currentString context: contextSize width: previewWidth [
+
 	^ self new
 		lineIndex: lineIndex;
 		baselineText: baselineString;
@@ -39,17 +40,21 @@ RubGutterDiffPreviewMorph class >> forLine: lineIndex baseline: baselineString c
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> baselineText [
+
 	^ baselineText
 ]
 
 { #category : 'accessing' }
-RubGutterDiffPreviewMorph >> baselineText: aString [
-	baselineText := aString
+RubGutterDiffPreviewMorph >> baselineText: aBaselineSourceCode [
+
+	baselineText := aBaselineSourceCode
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
+
 	| builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight targetPatchLine |
+	1 halt.
 	builder := TextDiffBuilder from: baselineText to: currentText.
 	rawPairs := builder buildPatchSequence.
 	blocks := self segmentIntoBlocks: rawPairs.
@@ -104,19 +109,21 @@ RubGutterDiffPreviewMorph >> computeTargetPatchLineFromBlocks: blocks startIdx: 
 	For non-match blocks (changes), scroll to the first line of the block
 	so both old and new content of a modification are visible together."
 	| clickedContextPos currentLinesSeen patchLines |
+
 	clickedContextPos := lineIndex - startIdx + 1.
 	currentLinesSeen := 0.
 	patchLines := 0.
 	blocks do: [ :block |
+		1 halt.
 		(block first key = #match) ifTrue: [
 			patchLines := patchLines + 1.
 			currentLinesSeen := currentLinesSeen + 1.
 			currentLinesSeen >= clickedContextPos ifTrue: [ ^ patchLines ]
-		] ifFalse: [
-			| blockStart |
+		] ifFalse: [ | blockStart |
 			blockStart := patchLines + 1.
 			block do: [ :pair |
 				patchLines := patchLines + 1.
+				1 halt.
 				pair key = #remove ifFalse: [
 					currentLinesSeen := currentLinesSeen + 1.
 					currentLinesSeen >= clickedContextPos ifTrue: [ ^ blockStart ] ] ] ] ].
@@ -125,55 +132,63 @@ RubGutterDiffPreviewMorph >> computeTargetPatchLineFromBlocks: blocks startIdx: 
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> contextLines [
+
 	^ contextLines
 ]
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> contextLines: anInteger [
+
 	contextLines := anInteger
 ]
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> currentText [
+
 	^ currentText
 ]
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> currentText: aString [
+
 	currentText := aString
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> delete [
+
 	self activeHand ifNotNil: [ :hand | hand removeEventListener: self ].
 	super delete
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> extractContextFromLines: lines start: startIdx end: endIdx [
+
 	^ String streamContents: [ :stream |
-		startIdx to: endIdx do: [ :i |
-			| line |
+		startIdx to: endIdx do: [ :i | | line |
 			line := lines at: i ifAbsent: [ '' ].
 			stream nextPutAll: line.
-			i < endIdx ifTrue: [ stream cr ] ] ]
+			i < endIdx ifTrue: [ stream cr ]
+		]
+	]
 ]
 
 { #category : 'event handling' }
 RubGutterDiffPreviewMorph >> handleListenEvent: anEvent [
+
 	(anEvent isKindOf: MouseButtonEvent) ifFalse: [ ^ self ].
-	anEvent isMouseDown ifTrue: [
-		(self bounds containsPoint: anEvent position) ifFalse: [
-			self delete ] ]
+	anEvent isMouseDown ifTrue: [ (self bounds containsPoint: anEvent position) ifFalse: [ self delete ] ]
 ]
 
 { #category : 'testing' }
 RubGutterDiffPreviewMorph >> handlesKeyboard: evt [
+
 	^ true
 ]
 
 { #category : 'initialization' }
 RubGutterDiffPreviewMorph >> initialize [
+
 	super initialize.
 	self clipSubmorphs: true.
 	contextLines := 3
@@ -181,131 +196,128 @@ RubGutterDiffPreviewMorph >> initialize [
 
 { #category : 'event handling' }
 RubGutterDiffPreviewMorph >> keyDown: anEvent [
-	anEvent keyCharacter = Character escape ifTrue: [
-		self delete.
-		^ true ].
+
+	anEvent keyCharacter = Character escape ifTrue: [ self delete . ^ true ].
+	
 	^ super keyDown: anEvent
 ]
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> lineIndex [
+
 	^ lineIndex
 ]
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> lineIndex: anInteger [
+
 	lineIndex := anInteger
 ]
 
 { #category : 'opening' }
 RubGutterDiffPreviewMorph >> openInWorld [
+
 	super openInWorld.
 	self activeHand addEventListener: self
 ]
 
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> previewWidth: anInteger [
+
 	previewWidth := anInteger
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> segmentIntoBlocks: pairs [
+
 	| blocks currentBlock |
+	1 halt.
 	blocks := OrderedCollection new.
 	currentBlock := nil.
 	pairs do: [ :pair |
-		pair key = #match ifTrue: [
-			currentBlock ifNotNil: [
-				blocks add: currentBlock asArray.
-				currentBlock := nil ].
-			blocks add: { pair } ].
-		pair key ~= #match ifTrue: [
-			currentBlock ifNil: [ currentBlock := OrderedCollection new ].
-			currentBlock add: pair ] ].
+			pair key = #match ifTrue: [
+					currentBlock ifNotNil: [
+							blocks add: currentBlock asArray.
+							currentBlock := nil ].
+					blocks add: { pair } ].
+			pair key ~= #match ifTrue: [
+					currentBlock ifNil: [ currentBlock := OrderedCollection new ].
+					currentBlock add: pair ] ].
 	currentBlock ifNotNil: [ blocks add: currentBlock asArray ].
 	^ blocks asArray
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> writeBlock: block withTheme: themeColors on: stream [
-	block first key = #match ifTrue: [
-		^ self writeLine: block first value withBackground: nil on: stream ].
+
+	1 halt.
+	block first key = #match ifTrue: [ ^ self writeLine: block first value withBackground: nil on: stream ].
 	(block anySatisfy: [ :p | p key = #remove ]) ifTrue: [
-		(block anySatisfy: [ :p | p key = #insert ]) ifTrue: [
-			^ self writeModificationBlock: block withTheme: themeColors on: stream ].
-		^ block do: [ :p |
-			self writeLine: p value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
-	block do: [ :p |
-		self writeLine: p value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
+			(block anySatisfy: [ :p | p key = #insert ]) ifTrue: [ ^ self writeModificationBlock: block withTheme: themeColors on: stream ].
+			^ block do: [ :p | self writeLine: p value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
+	block do: [ :p | self writeLine: p value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> writeLine: aString withBackground: aColor on: stream [
+
 	aColor ifNil: [
-		stream nextPutAll: aString.
-		(aString notEmpty and: [ aString last = Character cr ]) ifFalse: [ stream cr ].
-		^ self ].
-	stream
-		withAttributes: { TextBackgroundColor color: aColor }
-		do: [
+			stream nextPutAll: aString.
+			(aString notEmpty and: [ aString last = Character cr ]) ifFalse: [ stream cr ].
+			^ self ].
+
+	stream withAttributes: { (TextBackgroundColor color: aColor) } do: [
 			stream nextPutAll: aString.
 			(aString notEmpty and: [ aString last = Character cr ]) ifFalse: [ stream cr ] ]
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColors on: stream [
+
 	| removes inserts i |
+	1 halt.
 	removes := block select: [ :p | p key = #remove ].
 	inserts := block select: [ :p | p key = #insert ].
 	i := 1.
 	removes do: [ :removePair |
-		i <= inserts size
-			ifTrue: [
-				| oldLine newLine |
-				oldLine := removePair value.
-				newLine := (inserts at: i) value.
-				self
-					writeTokenDiff: oldLine
-					against: newLine
-					forSide: #remove
-					background: themeColors diffRemovedLinesBackgroundColor
-					highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
-					on: stream.
-				self
-					writeTokenDiff: oldLine
-					against: newLine
-					forSide: #insert
-					background: themeColors diffAdditionalLineBackgroundColor
-					highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
-					on: stream.
-				i := i + 1 ]
-			ifFalse: [
-				self writeLine: removePair value
-					withBackground: themeColors diffRemovedLinesBackgroundColor
-					on: stream ] ].
+			i <= inserts size
+				ifTrue: [
+						| oldLine newLine |
+						oldLine := removePair value.
+						newLine := (inserts at: i) value.
+						self
+							writeTokenDiff: oldLine
+							against: newLine
+							forSide: #remove
+							background: themeColors diffRemovedLinesBackgroundColor
+							highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
+							on: stream.
+						self
+							writeTokenDiff: oldLine
+							against: newLine
+							forSide: #insert
+							background: themeColors diffAdditionalLineBackgroundColor
+							highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
+							on: stream.
+						i := i + 1 ]
+				ifFalse: [ self writeLine: removePair value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
 	i to: inserts size do: [ :j |
-		self writeLine: (inserts at: j) value
-			withBackground: themeColors diffAdditionalLineBackgroundColor
-			on: stream ]
+	self writeLine: (inserts at: j) value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> writeTokenDiff: lineString against: otherString forSide: sideSymbol background: bgColor highlight: hlColor on: stream [
+
 	| diffs groups |
+	1 halt.
 	diffs := (InlineTextDiffBuilder from: lineString to: otherString) buildPatchSequence.
 	groups := diffs groupByRuns: [ :e | e key ].
 	groups do: [ :group |
-		| groupKey |
-		groupKey := group first key.
-		groupKey = #match ifTrue: [
-			group do: [ :each |
-				stream
-					withAttributes: { TextBackgroundColor color: bgColor }
-					do: [ stream nextPutAll: each value ] ] ].
-		groupKey = sideSymbol ifTrue: [
-			group do: [ :each |
-				stream
-					withAttributes: { TextBackgroundColor color: hlColor }
-					do: [ stream nextPutAll: each value ] ] ] ].
+			| groupKey |
+			groupKey := group first key.
+			groupKey = #match ifTrue: [
+				group do: [ :each | stream withAttributes: { (TextBackgroundColor color: bgColor) } do: [ stream nextPutAll: each value ] ] ].
+			groupKey = sideSymbol ifTrue: [
+				group do: [ :each | stream withAttributes: { (TextBackgroundColor color: hlColor) } do: [ stream nextPutAll: each value ] ] ] ].
 	stream cr
 ]

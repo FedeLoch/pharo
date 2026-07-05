@@ -18,30 +18,38 @@ Class {
 
 { #category : 'accessing' }
 RubMethodBaselineProvider >> baselineForMethod: aCompiledMethod [
+
 	self subclassResponsibility
 ]
 
 { #category : 'accessing' }
 RubMethodBaselineProvider >> baselineForMethod: aCompiledMethod ifNil: aBlock [
+
 	| result |
+
 	result := self baselineForMethod: aCompiledMethod.
+
 	^ result ifNil: aBlock
 ]
 
 { #category : 'accessing' }
 RubMethodBaselineProvider >> baselineForMethod: aCompiledMethod ifNone: aBlock [
-	^ self baselineForMethod: aCompiledMethod
-		ifNil: [ fallbackProvider
-			ifNotNil: [ fallbackProvider baselineForMethod: aCompiledMethod ifNone: aBlock ]
-			ifNil: aBlock ]
+
+	^ self
+		  baselineForMethod: aCompiledMethod
+		  ifNil: [ fallbackProvider ifNotNil: [
+				fallbackProvider baselineForMethod: aCompiledMethod ifNone: aBlock
+	] ifNil: aBlock ]
 ]
 
 { #category : 'accessing' }
 RubMethodBaselineProvider >> fallbackProvider [
+
 	^ fallbackProvider
 ]
 
 { #category : 'accessing' }
 RubMethodBaselineProvider >> fallbackProvider: aProvider [
+
 	fallbackProvider := aProvider
 ]
