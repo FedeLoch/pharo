@@ -19,13 +19,16 @@ RubEpiceaMethodBaselineProvider >> baselineForMethod: aCompiledMethod [
 	| className selector entry |
 
 	EpMonitor hasCurrent ifFalse: [ ^ nil ].
+
 	className := aCompiledMethod methodClass instanceSide name.
 	selector := aCompiledMethod selector.
+
 	entry := EpMonitor current log fromHeadDetect: [ :each | | event |
 		event := each content.
 		(event isKindOf: EpMethodModification) and: [
 			(event behaviorAffectedName = className) and: [ event methodAffectedSelector = selector ] ] ]
 		         ifNotFound: [ nil ].
+
 	entry ifNil: [ ^ nil ].
 
 	^ entry content oldSourceCode
