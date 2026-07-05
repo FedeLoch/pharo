@@ -14,241 +14,293 @@ Class {
 }
 
 { #category : 'running' }
-RubGutterDiffDisplayerTest >> setUp [
-	super setUp.
-	morph := RubScrolledTextMorph new.
-	morph extent: 400 @ 250.
-	morph withGutterDiff.
-	ruler := morph gutterDiffRuler.
-	ruler baseline: 'line1
+RubGutterDiffDisplayerTest >> baselineCode [
+
+	^ 'line1
 line2
 line3'
 ]
 
 { #category : 'running' }
+RubGutterDiffDisplayerTest >> setUp [
+
+	super setUp.
+	morph := RubScrolledTextMorph new.
+	morph extent: 400 @ 250.
+	morph withGutterDiff.
+	ruler := morph gutterDiffRuler.
+	ruler baseline: self baselineCode
+]
+
+{ #category : 'running' }
 RubGutterDiffDisplayerTest >> tearDown [
+
 	morph ifNotNil: [ morph delete ].
 	super tearDown
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testAllLinesModified [
-	"Positional: same length, all differ → all #modified (blue)"
-	morph setTextWith: 'new1
+
+	| newSourceCode |
+	newSourceCode := 'new1
 new2
 new3'.
-	ruler computeLineStates.
-	self assert: ruler lineStates equals: #(#modified #modified #modified) asArray.
-	self assert: ruler removedPositions isEmpty
+
+	self testDiffWith: newSourceCode diff: #( #modified #modified #modified ) removed: {  }
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testAllLinesUnchanged [
-	morph setTextWith: 'line1
+
+	| newSourceCode |
+	newSourceCode := 'line1
 line2
 line3'.
+
+	self testDiffWith: newSourceCode diff: #( #unchanged #unchanged #unchanged ) removed: {  }
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testDiffFfrom: baselineCode With: newSourceCode diff: diff removed: removed [
+
+	ruler baseline: baselineCode.
+	self testDiffWith: newSourceCode diff: diff removed: removed
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testDiffWith: newSourceCode diff: diffArray removed: removedArray [
+
+	morph setTextWith: newSourceCode.
+
 	ruler computeLineStates.
-	self assert: ruler lineStates equals: #(#unchanged #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions isEmpty
+	
+	self assert: ruler lineStates equals: diffArray asArray.
+
+	self assert: ruler removedPositions equals: removedArray asOrderedCollection
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testFirstLineModified [
 	"Positional: position 1 differs → #modified (blue)"
-	morph setTextWith: 'modified1
+
+	| newSourceCode |
+	newSourceCode := 'modified1
 line2
 line3'.
-	ruler computeLineStates.
-	self
-		assert: ruler lineStates
-		equals: #(#modified #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions isEmpty
+
+	self testDiffWith: newSourceCode diff: #( #modified #unchanged #unchanged ) removed: {  }
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testGutterDiffRulerAdded [
+
 	self assert: ruler notNil.
 	self assert: ruler class equals: RubGutterDiffDisplayer
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testGutterDiffRulerRemoved [
+
 	morph withoutGutterDiff.
 	self assert: morph gutterDiffRuler isNil
 ]
 
 { #category : 'tests' }
+RubGutterDiffDisplayerTest >> testInsertAndEditNearby [
+	"Editing a line AND inserting a line nearby: patch-sequence walking groups the
+	insert and adjacent modify into one modification block because both have no
+	LCS match and are followed by a remove+match."
+
+	| baselineCode newSourceCode |
+	baselineCode := 'line1
+line2
+line3
+line4'.
+
+	newSourceCode := 'line1
+inserted
+edited2
+line3
+line4'.
+
+	self
+		testDiffFfrom: baselineCode
+		With: newSourceCode
+		diff: #( #unchanged #modified #modified #unchanged #unchanged )
+		removed: {  }
+]
+
+{ #category : 'tests' }
 RubGutterDiffDisplayerTest >> testInsertLineInMiddle [
 	"LCS-based: inserted line → #added (green), shifted lines remain #unchanged"
-	morph setTextWith: 'line1
+
+	| newSourceCode |
+	newSourceCode := 'line1
 inserted
 line2
 line3'.
-	ruler computeLineStates.
-	self
-		assert: ruler lineStates
-		equals: #(#unchanged #added #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions isEmpty
+
+	self testDiffWith: newSourceCode diff: #( #unchanged #added #unchanged #unchanged ) removed: {  }
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testLastLineModified [
 	"Positional: position 3 differs → #modified (blue)"
-	morph setTextWith: 'line1
+
+	| newSourceCode |
+	newSourceCode := 'line1
 line2
 modified3'.
-	ruler computeLineStates.
-	self
-		assert: ruler lineStates
-		equals: #(#unchanged #unchanged #modified) asArray.
-	self assert: ruler removedPositions isEmpty
+
+	self testDiffWith: newSourceCode diff: #( #unchanged #unchanged #modified ) removed: {  }
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testLineStatesAfterTextChanged [
-	morph setTextWith: 'line1
+
+	| newSourceCode |
+	newSourceCode := 'line1
 line2
 line3'.
-	morph textChanged.
-	"After textChanged, the ruler should have recomputed its line states"
-	self
-		assert: ruler lineStates
-		equals: #(#unchanged #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions isEmpty
+
+	self testDiffWith: newSourceCode diff: #( #unchanged #unchanged #unchanged ) removed: {  }
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testLinesRemovedAtEnd [
 	"Trailing baseline lines get removal arrows at their original positions"
-	morph setTextWith: 'line1'.
-	ruler computeLineStates.
-	self
-		assert: ruler lineStates
-		equals: #(#unchanged) asArray.
-	self assert: ruler removedPositions asArray equals: #(2)
-]
 
-{ #category : 'tests' }
-RubGutterDiffDisplayerTest >> testMultipleLinesModified [
-	"Positional: positions 1 and 3 differ → #modified (blue)"
-	morph setTextWith: 'modified1
-line2
-modified3'.
-	ruler computeLineStates.
-	self
-		assert: ruler lineStates
-		equals: #(#modified #unchanged #modified) asArray.
-	self assert: ruler removedPositions isEmpty
-]
+	| newSourceCode |
+	newSourceCode := 'line1'.
 
-{ #category : 'tests' }
-RubGutterDiffDisplayerTest >> testRemovedPositionsAfterDeletion [
-	"Trailing removal records the original baseline line index"
-	ruler baseline: 'a
-b
-c
-d'.
-	morph setTextWith: 'a
-b
-c'.
-	ruler computeLineStates.
-	self assert: ruler removedPositions asArray equals: #(4)
-]
-
-{ #category : 'tests' }
-RubGutterDiffDisplayerTest >> testRemovedPositionsMultipleDeletions [
-	"Multiple trailing deletions record their original baseline indices"
-	ruler baseline: 'a
-b
-c
-d
-e'.
-	morph setTextWith: 'a
-b'.
-	ruler computeLineStates.
-	self assert: ruler removedPositions asArray equals: #(3)
-]
-
-{ #category : 'tests' }
-RubGutterDiffDisplayerTest >> testRemovedPositionInsideText [
-	"Deleting middle line shows removal arrow at original position; remaining line is LCS-matched → #unchanged"
-	ruler baseline: 'line1
-line2
-line3'.
-	morph setTextWith: 'line1
-line3'.
-	ruler computeLineStates.
-	self assert: ruler lineStates equals: #(#unchanged #unchanged) asArray.
-	self assert: ruler removedPositions asArray equals: #(2)
-]
-
-{ #category : 'tests' }
-RubGutterDiffDisplayerTest >> 	testInsertAndEditNearby [
-	"Editing a line AND inserting a line nearby: patch-sequence walking groups the
-	insert and adjacent modify into one modification block because both have no
-	LCS match and are followed by a remove+match."
-	ruler baseline: 'line1
-line2
-line3
-line4'.
-	morph setTextWith: 'line1
-inserted
-edited2
-line3
-line4'.
-	ruler computeLineStates.
-	self
-		assert: ruler lineStates
-		equals: #(#unchanged #modified #modified #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions isEmpty
+	self testDiffWith: newSourceCode diff: #( #unchanged ) removed: #( 2 )
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testMultipleDeletionsInMiddle [
 	"Deleting multiple lines in the middle leaves remaining lines LCS-matched → #unchanged,
 	with removal arrows at the original baseline positions"
-	ruler baseline: 'a
+
+	| baselineCode newSourceCode |
+	baselineCode := 'a
 b
 c
 d
 e'.
-	morph setTextWith: 'a
+	newSourceCode := 'a
 d
 e'.
-	ruler computeLineStates.
+
 	self
-		assert: ruler lineStates
-		equals: #(#unchanged #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions asArray equals: #(2)
+		testDiffFfrom: baselineCode
+		With: newSourceCode
+		diff: #( #unchanged #unchanged #unchanged )
+		removed: #( 2 )
 ]
 
 { #category : 'tests' }
-RubGutterDiffDisplayerTest >> 	testNonConsecutiveRemovalsKeepSeparateArrows [
+RubGutterDiffDisplayerTest >> testMultipleLinesModified [
+	"Positional: positions 1 and 3 differ → #modified (blue)"
+
+	| newSourceCode |
+	newSourceCode := 'modified1
+line2
+modified3'.
+
+	self testDiffWith: newSourceCode diff: #( #modified #unchanged #modified ) removed: #(  )
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testNonConsecutiveRemovalsKeepSeparateArrows [
 	"Non-adjacent deletions each keep their own arrow (not collapsed).
 	Each unmatched baseline line becomes a gap at the position in the current text
 	where it would have appeared. Remaining current lines are #unchanged because
 	they have direct LCS matches."
-	ruler baseline: 'a
+
+	| baselineCode newSourceCode |
+	baselineCode := 'a
 b
 c
 d
 e'.
-	morph setTextWith: 'a
+	newSourceCode := 'a
 c
 e'.
-	ruler computeLineStates.
+
 	self
-		assert: ruler lineStates
-		equals: #(#unchanged #unchanged #unchanged) asArray.
-	self assert: ruler removedPositions asArray equals: #(2 3)
+		testDiffFfrom: baselineCode
+		With: newSourceCode
+		diff: #( #unchanged #unchanged #unchanged )
+		removed: #( 2 3 )
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testRemovedPositionInsideText [
+	"Deleting middle line shows removal arrow at original position; remaining line is LCS-matched → #unchanged"
+
+	| baselineCode newSourceCode |
+	baselineCode := 'line1
+line2
+line3'.
+	newSourceCode := 'line1
+line3'.
+
+	self
+		testDiffFfrom: baselineCode
+		With: newSourceCode
+		diff: #( #unchanged #unchanged )
+		removed: #( 2 )
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testRemovedPositionsAfterDeletion [
+	"Trailing removal records the original baseline line index"
+
+	| baselineCode newSourceCode |
+	baselineCode := 'a
+b
+c
+d'.
+	newSourceCode := 'a
+b
+c'.
+
+	self
+		testDiffFfrom: baselineCode
+		With: newSourceCode
+		diff: #( #unchanged #unchanged #unchanged )
+		removed: #( 4 )
+]
+
+{ #category : 'tests' }
+RubGutterDiffDisplayerTest >> testRemovedPositionsMultipleDeletions [
+	"Multiple trailing deletions record their original baseline indices"
+
+	| baselineCode newSourceCode |
+	baselineCode := 'a
+b
+c
+d
+e'.
+	newSourceCode := 'a
+b'.
+
+	self
+		testDiffFfrom: baselineCode
+		With: newSourceCode
+		diff: #( #unchanged #unchanged )
+		removed: #( 3 )
 ]
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testWithGutterDiffConvenience [
+
 	| morph2 ruler2 |
 	morph2 := RubScrolledTextMorph new.
 	morph2 withGutterDiff.
 	ruler2 := morph2 gutterDiffRuler.
+
 	self assert: ruler2 notNil.
 	self assert: (morph2 hasRulerNamed: #gutterDiff).
 	morph2 delete
@@ -256,10 +308,12 @@ RubGutterDiffDisplayerTest >> testWithGutterDiffConvenience [
 
 { #category : 'tests' }
 RubGutterDiffDisplayerTest >> testWithoutGutterDiffConvenience [
+
 	| morph2 |
 	morph2 := RubScrolledTextMorph new.
 	morph2 withGutterDiff.
 	self assert: (morph2 hasRulerNamed: #gutterDiff).
+
 	morph2 withoutGutterDiff.
 	self deny: (morph2 hasRulerNamed: #gutterDiff).
 	morph2 delete
