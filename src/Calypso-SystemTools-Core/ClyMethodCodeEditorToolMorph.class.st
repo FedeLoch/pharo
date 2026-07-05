@@ -215,6 +215,7 @@ ClyMethodCodeEditorToolMorph >> findAnySelectorInSourceCode: selectors [
 
 { #category : 'selecting text' }
 ClyMethodCodeEditorToolMorph >> findAnyVariableInSourceCode: varNames [
+	
 	| foundNode |
 
 	foundNode := editingMethod variableNodes

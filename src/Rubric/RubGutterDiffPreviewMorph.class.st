@@ -357,7 +357,7 @@ RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColor
 RubGutterDiffPreviewMorph >> writeTokenDiff: lineString against: otherString forSide: sideSymbol background: bgColor highlight: hlColor on: stream [
 
 	| diffs groups |
-	1 halt.
+
 	diffs := (InlineTextDiffBuilder from: lineString to: otherString) buildPatchSequence.
 	groups := diffs groupByRuns: [ :e | e key ].
 	groups do: [ :group |
