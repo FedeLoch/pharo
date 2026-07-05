@@ -793,8 +793,7 @@ Package >> renameTo: aSymbol [
 { #category : 'accessing' }
 Package >> repositories [
 	
-	^ IceRepository registry select: [ :repo |
-                     repo includesPackageNamed: self name ]
+	^ IceRepository registry select: [ :repo | repo includesPackageNamed: self name ]
 ]
 
 { #category : 'tags' }

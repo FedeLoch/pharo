@@ -81,6 +81,15 @@ ClyMethodCodeEditorToolMorph >> attachToSystem [
 	self class codeSupportAnnouncer weak when: OCASTCacheReset send: #resetASTCache to: self
 ]
 
+{ #category : 'building' }
+ClyMethodCodeEditorToolMorph >> baselineProvider [
+
+	^ (RubGitMethodBaselineProvider new
+			fallbackProvider: (RubEpiceaMethodBaselineProvider new
+				fallbackProvider: RubCompiledMethodBaselineProvider new)
+		)
+]
+
 { #category : 'testing' }
 ClyMethodCodeEditorToolMorph >> belongsToCurrentBrowserContext [
 	^browser methodSelection isEmpty
@@ -104,16 +113,8 @@ ClyMethodCodeEditorToolMorph >> belongsToRemovedBrowserContext [
 ClyMethodCodeEditorToolMorph >> buildLeftSideBar [
 
 	super buildLeftSideBar.
-	textMorph withGutterDiff.
-	textMorph gutterDiffRuler
-		editingMethod: editingMethod;
-		baselineProvider:
-			(RubGitMethodBaselineProvider new
-				fallbackProvider:
-					(RubEpiceaMethodBaselineProvider new
-						fallbackProvider: RubCompiledMethodBaselineProvider new)).
-	textMorph gutterDiffRuler refreshBaseline.
-
+	
+	self setGutterDiff.
 	CmdTextLeftBarClickActivation enableInMorph: self leftSideBar withCommandsFrom: self.
 	CmdTextLeftBarDoubleClickActivation enableInMorph: self leftSideBar withCommandsFrom: self
 ]
@@ -345,6 +346,16 @@ ClyMethodCodeEditorToolMorph >> selectedSourceNode [
 	^ selectedNode ifNil: [ ast ]
 ]
 
+{ #category : 'building' }
+ClyMethodCodeEditorToolMorph >> setGutterDiff [
+
+	textMorph withGutterDiff.
+	textMorph gutterDiffRuler
+		editingMethod: editingMethod;
+		baselineProvider: self baselineProvider.
+	textMorph gutterDiffRuler refreshBaseline.
+]
+
 { #category : 'operations' }
 ClyMethodCodeEditorToolMorph >> setMethodProtocol: currentMethod [
 	"Only change the protocol if we created a new method, not if we edit an existing one"
@@ -387,6 +398,13 @@ ClyMethodCodeEditorToolMorph >> switchToMethod: aMethod [
 ]
 
 { #category : 'updating' }
+ClyMethodCodeEditorToolMorph >> textUpdated [
+
+	super textUpdated.
+	textMorph gutterDiffRuler ifNotNil: [ :r | r refreshBaseline ]
+]
+
+{ #category : 'updating' }
 ClyMethodCodeEditorToolMorph >> update [
 
 	editingMethod := editingMethod origin
@@ -395,13 +413,6 @@ ClyMethodCodeEditorToolMorph >> update [
 	super update.
 
 	self formatTextIfNeeded
-]
-
-{ #category : 'updating' }
-ClyMethodCodeEditorToolMorph >> textUpdated [
-
-	super textUpdated.
-	textMorph gutterDiffRuler ifNotNil: [ :r | r refreshBaseline ]
 ]
 
 { #category : 'updating' }
