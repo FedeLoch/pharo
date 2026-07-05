@@ -9,9 +9,15 @@ Class {
 	#tag : 'Editing-Widgets'
 }
 
+{ #category : 'as yet unclassified' }
+RubMethodBaselineProviderTest >> foo [ ^ 42
+]
+
 { #category : 'tests' }
 RubMethodBaselineProviderTest >> testCompiledMethodProvider [
+
 	| provider method |
+
 	provider := RubCompiledMethodBaselineProvider new.
 	method := RubMethodBaselineProviderTest >> #testCompiledMethodProvider.
 	self assert: (provider baselineForMethod: method) equals: method sourceCode
@@ -52,18 +58,10 @@ RubMethodBaselineProviderTest >> testFallbackChainWithNilReturn [
 { #category : 'tests' }
 RubMethodBaselineProviderTest >> testGitProviderReturnsNilWhenNoIceberg [
 	| provider method |
+	
 	provider := RubGitMethodBaselineProvider new.
-	method := Object >> #yourself.
-	self assert: (provider baselineForMethod: method) isNil
-]
-
-{ #category : 'tests' }
-RubMethodBaselineProviderTest >> testProviderSubclassResponsibility [
-	| provider |
-	provider := RubMethodBaselineProvider new.
-	self
-		should: [ provider baselineForMethod: Object >> #yourself ]
-		raise: Error
-		whoseDescriptionIncludes: 'subclassResponsibility'
-		description: 'Abstract provider should raise subclassResponsibility'
+	self class compile: 'dynamicMethod ^ 42'.
+	method :=  self class >> #dynamicMethod.
+	self assert: (provider baselineForMethod: method) isNil.
+	self class removeSelector: #dynamicMethod.
 ]

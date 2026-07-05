@@ -97,6 +97,32 @@ RubGutterDiffPreviewMorph >> buildDiff [
 		borderColor: Color gray
 ]
 
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> computeTargetPatchLineFromBlocks: blocks startIdx: startIdx lineIndex: lineIndex [
+	"Walk through diff blocks and find the patch text line number
+	corresponding to the clicked line at lineIndex in the current text.
+	For non-match blocks (changes), scroll to the first line of the block
+	so both old and new content of a modification are visible together."
+	| clickedContextPos currentLinesSeen patchLines |
+	clickedContextPos := lineIndex - startIdx + 1.
+	currentLinesSeen := 0.
+	patchLines := 0.
+	blocks do: [ :block |
+		(block first key = #match) ifTrue: [
+			patchLines := patchLines + 1.
+			currentLinesSeen := currentLinesSeen + 1.
+			currentLinesSeen >= clickedContextPos ifTrue: [ ^ patchLines ]
+		] ifFalse: [
+			| blockStart |
+			blockStart := patchLines + 1.
+			block do: [ :pair |
+				patchLines := patchLines + 1.
+				pair key = #remove ifFalse: [
+					currentLinesSeen := currentLinesSeen + 1.
+					currentLinesSeen >= clickedContextPos ifTrue: [ ^ blockStart ] ] ] ] ].
+	^ nil
+]
+
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> contextLines [
 	^ contextLines
@@ -180,32 +206,6 @@ RubGutterDiffPreviewMorph >> openInWorld [
 { #category : 'accessing' }
 RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 	previewWidth := anInteger
-]
-
-{ #category : 'private' }
-RubGutterDiffPreviewMorph >> computeTargetPatchLineFromBlocks: blocks startIdx: startIdx lineIndex: lineIndex [
-	"Walk through diff blocks and find the patch text line number
-	corresponding to the clicked line at lineIndex in the current text.
-	For non-match blocks (changes), scroll to the first line of the block
-	so both old and new content of a modification are visible together."
-	| clickedContextPos currentLinesSeen patchLines |
-	clickedContextPos := lineIndex - startIdx + 1.
-	currentLinesSeen := 0.
-	patchLines := 0.
-	blocks do: [ :block |
-		(block first key = #match) ifTrue: [
-			patchLines := patchLines + 1.
-			currentLinesSeen := currentLinesSeen + 1.
-			currentLinesSeen >= clickedContextPos ifTrue: [ ^ patchLines ]
-		] ifFalse: [
-			| blockStart |
-			blockStart := patchLines + 1.
-			block do: [ :pair |
-				patchLines := patchLines + 1.
-				pair key = #remove ifFalse: [
-					currentLinesSeen := currentLinesSeen + 1.
-					currentLinesSeen >= clickedContextPos ifTrue: [ ^ blockStart ] ] ] ] ].
-	^ nil
 ]
 
 { #category : 'private' }

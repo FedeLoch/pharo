@@ -17,9 +17,11 @@ Class {
 { #category : 'accessing' }
 RubGitMethodBaselineProvider >> baselineForMethod: aCompiledMethod [
 	| repoClass repositories |
+
 	repoClass := Smalltalk classNamed: 'IceRepository'.
 	repoClass ifNil: [ ^ nil ].
 	repositories := aCompiledMethod package repositories.
+
 	(repositories size ~= 1) ifTrue: [ ^ nil ].
 	^ self committedSourceFor: aCompiledMethod in: repositories first
 ]
