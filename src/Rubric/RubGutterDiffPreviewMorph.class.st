@@ -53,35 +53,28 @@ RubGutterDiffPreviewMorph >> baselineText: aBaselineSourceCode [
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> buildDiff [
 
-	| builder rawPairs blocks themeColors patchText lines lineCount longestLine maxHeight popupWidth popupHeight targetPatchLine |
-	1 halt.
+	| builder rawPairs blocks patchText lines longestLine popupWidth popupHeight targetPatchLine |
+
 	builder := TextDiffBuilder from: baselineText to: currentText.
 	rawPairs := builder buildPatchSequence.
 	blocks := self segmentIntoBlocks: rawPairs.
-	targetPatchLine := self
-		computeTargetPatchLineFromBlocks: blocks
+	targetPatchLine := self computeTargetPatchLineFromBlocks: blocks
 		startIdx: 1
 		lineIndex: lineIndex.
-	themeColors := UITheme current.
 	patchText := Text streamContents: [ :stream |
-		blocks do: [ :block | self writeBlock: block withTheme: themeColors on: stream ] ].
-	patchText size > 0 ifTrue: [ patchText := patchText copyFrom: 1 to: patchText size - 1 ].
+		blocks do: [ :block | self writeBlock: block withTheme: UITheme current on: stream ] ].
+
+	patchText ifNotEmpty: [ patchText := patchText copyFrom: 1 to: patchText size - 1 ].
 	lines := patchText asString lines.
-	lineCount := lines size.
 	longestLine := (lines collect: [ :each | each size ]) max ifNil: [ 0 ].
-	popupWidth := ((longestLine * 8 + 70) min: previewWidth) max: 200.
-	maxHeight := self world ifNotNil: [ :w | w height * 0.6 ] ifNil: [ 400 ].
-	popupHeight := ((5 min: lineCount) * 14 + 30) min: maxHeight max: 100.
-	diffMorph := RubScrolledTextMorph new
-		extent: popupWidth @ popupHeight;
-		setText: patchText;
-		beNotWrapped;
-		withLineNumbers;
-		yourself.
-	targetPatchLine ifNotNil: [
-		| textLines textLine currentOffset viewportHeight centerY targetY |
+	popupWidth := self popupWidth: longestLine.
+	popupHeight := self popupHeight: lines.
+	
+	diffMorph := self diffMorph: popupWidth height: popupHeight text: patchText. 
+
+	targetPatchLine ifNotNil: [ | textLines textLine currentOffset viewportHeight centerY targetY |
 		textLines := diffMorph paragraph lines.
-		targetPatchLine <= textLines size ifTrue: [
+		(targetPatchLine <= textLines size) ifTrue: [
 			textLine := textLines at: targetPatchLine.
 			currentOffset := diffMorph scrollPane offset.
 			viewportHeight := diffMorph scrollPane scrollBounds height.
@@ -114,19 +107,24 @@ RubGutterDiffPreviewMorph >> computeTargetPatchLineFromBlocks: blocks startIdx: 
 	currentLinesSeen := 0.
 	patchLines := 0.
 	blocks do: [ :block |
-		1 halt.
 		(block first key = #match) ifTrue: [
+
 			patchLines := patchLines + 1.
 			currentLinesSeen := currentLinesSeen + 1.
-			currentLinesSeen >= clickedContextPos ifTrue: [ ^ patchLines ]
+			(currentLinesSeen >= clickedContextPos) ifTrue: [ ^ patchLines ]
 		] ifFalse: [ | blockStart |
 			blockStart := patchLines + 1.
 			block do: [ :pair |
 				patchLines := patchLines + 1.
-				1 halt.
+
 				pair key = #remove ifFalse: [
 					currentLinesSeen := currentLinesSeen + 1.
-					currentLinesSeen >= clickedContextPos ifTrue: [ ^ blockStart ] ] ] ] ].
+					(currentLinesSeen >= clickedContextPos) ifTrue: [ ^ blockStart ]
+				]
+			] 
+		]
+	].
+
 	^ nil
 ]
 
@@ -162,6 +160,17 @@ RubGutterDiffPreviewMorph >> delete [
 ]
 
 { #category : 'private' }
+RubGutterDiffPreviewMorph >> diffMorph: popupWidth height: popupHeight text: patchText [
+
+	^ RubScrolledTextMorph new
+		extent: popupWidth @ popupHeight;
+		setText: patchText;
+		beNotWrapped;
+		withLineNumbers;
+		yourself.
+]
+
+{ #category : 'private' }
 RubGutterDiffPreviewMorph >> extractContextFromLines: lines start: startIdx end: endIdx [
 
 	^ String streamContents: [ :stream |
@@ -194,6 +203,24 @@ RubGutterDiffPreviewMorph >> initialize [
 	contextLines := 3
 ]
 
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> isInsert: pair [
+
+	^ pair key = #insert
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> isMatch: pair [
+
+	^ pair key = #match
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> isRemove: pair [
+
+	^ pair key = #remove
+]
+
 { #category : 'event handling' }
 RubGutterDiffPreviewMorph >> keyDown: anEvent [
 
@@ -214,11 +241,29 @@ RubGutterDiffPreviewMorph >> lineIndex: anInteger [
 	lineIndex := anInteger
 ]
 
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> maxHeight [
+
+	^ self world ifNotNil: [ :w | w height * 0.6 ] ifNil: [ 400 ]
+]
+
 { #category : 'opening' }
 RubGutterDiffPreviewMorph >> openInWorld [
 
 	super openInWorld.
 	self activeHand addEventListener: self
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> popupHeight: lines [
+
+	^ ((5 min: (lines size)) * 14 + 30) min: self maxHeight max: 100
+]
+
+{ #category : 'private' }
+RubGutterDiffPreviewMorph >> popupWidth: longestLine [
+
+	^ ((longestLine * 8 + 70) min: previewWidth) max: 200
 ]
 
 { #category : 'accessing' }
@@ -231,30 +276,29 @@ RubGutterDiffPreviewMorph >> previewWidth: anInteger [
 RubGutterDiffPreviewMorph >> segmentIntoBlocks: pairs [
 
 	| blocks currentBlock |
-	1 halt.
 	blocks := OrderedCollection new.
 	currentBlock := nil.
 	pairs do: [ :pair |
-			pair key = #match ifTrue: [
-					currentBlock ifNotNil: [
-							blocks add: currentBlock asArray.
-							currentBlock := nil ].
-					blocks add: { pair } ].
-			pair key ~= #match ifTrue: [
-					currentBlock ifNil: [ currentBlock := OrderedCollection new ].
-					currentBlock add: pair ] ].
+		(self isMatch: pair) ifTrue: [
+			currentBlock ifNotNil: [ blocks add: currentBlock asArray . currentBlock := nil ].
+		blocks add: { pair } ] ifFalse: [
+			currentBlock ifNil: [ currentBlock := OrderedCollection new ] . currentBlock add: pair ]
+	].
+
 	currentBlock ifNotNil: [ blocks add: currentBlock asArray ].
+
 	^ blocks asArray
 ]
 
 { #category : 'private' }
 RubGutterDiffPreviewMorph >> writeBlock: block withTheme: themeColors on: stream [
 
-	1 halt.
-	block first key = #match ifTrue: [ ^ self writeLine: block first value withBackground: nil on: stream ].
-	(block anySatisfy: [ :p | p key = #remove ]) ifTrue: [
-			(block anySatisfy: [ :p | p key = #insert ]) ifTrue: [ ^ self writeModificationBlock: block withTheme: themeColors on: stream ].
+	(self isMatch: block first) ifTrue: [ ^ self writeLine: block first value withBackground: nil on: stream ].
+	
+	(block anySatisfy: [ :pair | self isRemove: pair ]) ifTrue: [
+		(block anySatisfy: [ :pair | self isInsert: pair ]) ifTrue: [ ^ self writeModificationBlock: block withTheme: themeColors on: stream ].
 			^ block do: [ :p | self writeLine: p value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
+
 	block do: [ :p | self writeLine: p value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
 ]
 
@@ -275,34 +319,38 @@ RubGutterDiffPreviewMorph >> writeLine: aString withBackground: aColor on: strea
 RubGutterDiffPreviewMorph >> writeModificationBlock: block withTheme: themeColors on: stream [
 
 	| removes inserts i |
-	1 halt.
-	removes := block select: [ :p | p key = #remove ].
-	inserts := block select: [ :p | p key = #insert ].
+	
+	removes := block select: [ :pair | self isRemove: pair ].
+	inserts := block select: [ :pair | self isInsert: pair  ].
 	i := 1.
+	
+	"Processing Removes"
 	removes do: [ :removePair |
-			i <= inserts size
-				ifTrue: [
-						| oldLine newLine |
-						oldLine := removePair value.
-						newLine := (inserts at: i) value.
-						self
-							writeTokenDiff: oldLine
-							against: newLine
-							forSide: #remove
-							background: themeColors diffRemovedLinesBackgroundColor
-							highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
-							on: stream.
-						self
-							writeTokenDiff: oldLine
-							against: newLine
-							forSide: #insert
-							background: themeColors diffAdditionalLineBackgroundColor
-							highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
-							on: stream.
-						i := i + 1 ]
-				ifFalse: [ self writeLine: removePair value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ] ].
-	i to: inserts size do: [ :j |
-	self writeLine: (inserts at: j) value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream ]
+			(i <= inserts size) ifTrue: [ | oldLine newLine |
+				oldLine := removePair value.
+				newLine := (inserts at: i) value.
+				self
+					writeTokenDiff: oldLine
+					against: newLine
+					forSide: #remove
+					background: themeColors diffRemovedLinesBackgroundColor
+					highlight: (themeColors diffRemovedLinesBackgroundColor alpha: 0.5)
+					on: stream.
+				self
+					writeTokenDiff: oldLine
+					against: newLine
+					forSide: #insert
+					background: themeColors diffAdditionalLineBackgroundColor
+					highlight: (themeColors diffAdditionalLineBackgroundColor alpha: 0.5)
+					on: stream.
+			i := i + 1 ] ifFalse: [
+			self writeLine: removePair value withBackground: themeColors diffRemovedLinesBackgroundColor on: stream ]
+	].
+
+	"Processing Inserts"
+	(i to: inserts size) do: [ :lineI |
+		self writeLine: (inserts at: lineI) value withBackground: themeColors diffAdditionalLineBackgroundColor on: stream
+	]
 ]
 
 { #category : 'private' }

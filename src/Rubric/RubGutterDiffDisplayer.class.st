@@ -150,7 +150,7 @@ RubGutterDiffDisplayer >> computedWidthFrom: aRectangle [
 RubGutterDiffDisplayer >> consolidatedRemovedPositions [
 	removedPositions ifEmpty: [ ^ #() ].
 	^ removedPositions withIndexSelect: [ :pos :idx |
-		idx = 1 or: [ pos ~= (removedPositions at: idx - 1) + 1 ] ]
+		idx = 1 or: [ pos ~= ((removedPositions at: idx - 1) + 1) ] ]
 ]
 
 { #category : 'drawing' }
