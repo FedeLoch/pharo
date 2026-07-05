@@ -563,6 +563,7 @@ RubScrolledTextMorph >> ghostTextRuler [
 
 { #category : 'accessing - rulers' }
 RubScrolledTextMorph >> gutterDiffRuler [
+
 	^ self rulerNamed: #gutterDiff
 ]
 
@@ -1328,6 +1329,7 @@ RubScrolledTextMorph >> withGhostText: aText [
 
 { #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withGutterDiff [
+
 	self withRulerNamed: #gutterDiff
 ]
 
@@ -1418,6 +1420,7 @@ RubScrolledTextMorph >> withoutGhostText [
 
 { #category : 'accessing - rulers' }
 RubScrolledTextMorph >> withoutGutterDiff [
+
 	self withoutRulerNamed: #gutterDiff
 ]
 
