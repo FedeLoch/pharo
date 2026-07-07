@@ -1190,12 +1190,6 @@ Integer >> replaceFrom: start to: stop with: replacement startingAt: repStart [
 ]
 
 { #category : 'enumerating' }
-Integer >> timesCollect: aBlock [
-
-	^ (1 to: self) collect: [ :anIndex | aBlock cull: anIndex ]
-]
-
-{ #category : 'enumerating' }
 Integer >> timesRepeat: aBlock [
 	"Evaluate the argument, aBlock, the number of times represented by the
 	receiver."
