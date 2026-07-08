@@ -454,7 +454,7 @@ Package >> internScopedSelector: aSymbol [
 
 	| found |
 	found := self visibleSelectorForSymbol: aSymbol asSymbol.
-	found == aSymbol ifFalse: [ ^ found ].
+	found == aSymbol asSymbol ifFalse: [ ^ found ].
 
 	^ self defineScopedSelector: aSymbol
 ]
@@ -788,6 +788,12 @@ Package >> renameTo: aSymbol [
 
 	self organizer basicRegisterPackage: self.
 	self codeChangeAnnouncer  announce: (PackageRenamed to: self oldName: oldName newName: newName)
+]
+
+{ #category : 'accessing' }
+Package >> repositories [
+	
+	^ IceRepository registry select: [ :repo | repo includesPackageNamed: self name ]
 ]
 
 { #category : 'tags' }

@@ -259,7 +259,7 @@ SystemNavigation >> browseMessageList: messageList name: labelString autoSelect:
 		  methods: methods;
 		  title: labelString;
 		  highlight: autoSelectString;
-		  refreshingBlock: aBlock;
+		  acceptBlock: aBlock;
 		  open
 ]
 
@@ -466,14 +466,13 @@ SystemNavigation >> openBrowserFor: aLiteral withMethods: aCollection [
 		sys
 			openBrowserFor: #printOn:
 			withMethods: (sys allCallsOn: #printOn:) asSortedCollection"
-
 	^ self headingAndAutoselectForLiteral: aLiteral do:
 		[:label :autoSelect|
 		self
 			browseMessageList: aCollection
 			name: label
 			autoSelect: autoSelect
-			refreshingBlock: [ :method | method hasSelector: aLiteral ] ]
+			refreshingBlock: [ :method | method refersToLiteral: aLiteral ] ]
 ]
 
 { #category : '*Tool-Base' }
